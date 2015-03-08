@@ -42,11 +42,17 @@ impl<T> Graph<T> {
         self.set_paths(second, &paths);
     }
 
+    //Doesnt make sure the opposite end has the same path
     pub fn set_paths(&mut self, index: usize, to: &[usize]) {
         self.data[index].paths.clear();
         for i in to {
             self.data[index].paths.push_back(*i);
         }
+    }
+
+    pub fn add_path(&mut self, from: usize, to: usize) {
+        self.data[from].paths.push_back(to);
+        self.data[to].paths.push_back(from);
     }
 
     pub fn remove_node(&mut self, index: usize) {
