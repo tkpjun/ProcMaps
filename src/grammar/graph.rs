@@ -27,7 +27,7 @@ impl<T> Graph<T> {
 
         let mut paths = Vec::new();
         for path in &self.data[first].paths {
-            if (*path != second) {
+            if *path != second {
                 paths.push(*path)
             }
         }
@@ -35,7 +35,7 @@ impl<T> Graph<T> {
 
         let mut paths = Vec::new();
         for path in &self.data[second].paths {
-            if (*path != first) {
+            if *path != first {
                 paths.push(*path)
             }
         }
@@ -95,5 +95,19 @@ impl<T> Graph<T> {
                 None => {}
             }
         }
+    }
+}
+
+impl<T> ToString for Graph<T> {
+    fn to_string(&self) -> String {
+        let mut s = String::new();
+        for node in &self.data {
+            s = s + "N";
+            for path in &node.paths {
+                s = s + " -> " + &*path.to_string();
+            }
+            s = s + "\n";
+        }
+        s
     }
 }

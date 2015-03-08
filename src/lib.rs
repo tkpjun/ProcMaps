@@ -1,7 +1,7 @@
 extern crate rand;
 
-mod grammar {
-    mod symbols;
-    mod rules;
-    mod graph;
+pub mod grammar {
+    pub mod symbols;
+    pub mod rules;
+    pub mod graph;
 }

@@ -22,9 +22,9 @@ pub enum Symbol {
 }
 
 pub struct Rule {
-    start: Vec<Box<Symbol>>,
-    end: Vec<Box<Symbol>>,
-    anchors: (usize, usize),
+    pub start: Vec<Box<Symbol>>,
+    pub end: Vec<Box<Symbol>>,
+    pub anchors: (usize, usize),
 }
 
 impl Graph<Symbol> {
