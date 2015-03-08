@@ -10,7 +10,6 @@ fn main() {
     graph.push_node(Symbol::LevelExit);
     graph.add_path(0, 1);
     println!("{}", graph.to_string());
-    println!("");
 
     let mut s = Vec::new();
     s.push(Box::new(Symbol::LevelEntr));

@@ -55,6 +55,30 @@ impl<T> Graph<T> {
         self.data[to].paths.push_back(from);
     }
 
+    pub fn remove_path(&mut self, from: usize, to: usize) {
+        let mut i = 0;
+        for p in &mut self.data[from].paths {
+            if *p == to {
+                break;
+            }
+            i += 1;
+        }
+        let mut end = self.data[from].paths.split_off(i);
+        end.pop_front();
+        self.data[from].paths.append(&mut end);
+
+        i = 0;
+        for p in &mut self.data[to].paths {
+            if *p == from {
+                break;
+            }
+            i += 1;
+        }
+        end = self.data[to].paths.split_off(i);
+        end.pop_front();
+        self.data[to].paths.append(&mut end);
+    }
+
     pub fn remove_node(&mut self, index: usize) {
         self.data.remove(index);
         for i in 0..self.data.len() {

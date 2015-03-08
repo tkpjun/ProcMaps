@@ -37,6 +37,9 @@ impl Graph<Symbol> {
         let temp = subs.len();
         let chosen = &subs[rand::thread_rng().gen_range(0, temp)];
         let last = chosen.len() - 1;
+        if chosen.len() == 2 {
+            self.remove_path(chosen[0], chosen[last]);
+        }
 
         let temp = rule.end.len();
         let mut drain = rule.end.drain();
@@ -75,8 +78,8 @@ impl Graph<Symbol> {
         }
         if rule.start.len() > 1 {
             //needs to remove in descending order
-            for node in chosen {
-                self.remove_node(*node);
+            for i in 1..(chosen.len()-1) {
+                self.remove_node(chosen[i]);
             }
         }
         true
