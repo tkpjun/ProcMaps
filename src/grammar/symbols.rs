@@ -2,7 +2,7 @@ pub use super::graph::Graph;
 pub use rand;
 pub use rand::Rng;
 
-#[derive(Eq, PartialEq)]
+#[derive(Eq, PartialEq, Debug)]
 pub enum Symbol {
     Key(i32),
     Lock(i32),
@@ -113,5 +113,19 @@ impl Graph<Symbol> {
             ret = ret.into_iter().filter(|x| x.len() == index + 1).collect::<Vec<Vec<usize>>>();
         }
         return ret;
+    }
+}
+
+impl ToString for Graph<Symbol> {
+    fn to_string(&self) -> String {
+        let mut s = String::new();
+        for node in &self.data {
+            s = s + &*format!("{:?}", node.value);
+            for path in &node.paths {
+                s = s + " -> " + &*path.to_string();
+            }
+            s = s + "\n";
+        }
+        s
     }
 }

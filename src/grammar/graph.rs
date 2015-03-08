@@ -121,17 +121,3 @@ impl<T> Graph<T> {
         }
     }
 }
-
-impl<T> ToString for Graph<T> {
-    fn to_string(&self) -> String {
-        let mut s = String::new();
-        for node in &self.data {
-            s = s + "N";
-            for path in &node.paths {
-                s = s + " -> " + &*path.to_string();
-            }
-            s = s + "\n";
-        }
-        s
-    }
-}
