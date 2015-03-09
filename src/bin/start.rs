@@ -11,14 +11,12 @@ fn main() {
     graph.add_path(0, 1);
     println!("{}", graph.to_string());
 
-    let mut s = Vec::new();
-    s.push(Box::new(Symbol::LevelEntr));
-    s.push(Box::new(Symbol::LevelExit));
+    let s = vec![Symbol::LevelEntr, Symbol::LevelExit];
     let mut e = Vec::new();
-    e.push(Box::new(Symbol::LevelEntr));
-    e.push(Box::new(Symbol::Key(0)));
-    e.push(Box::new(Symbol::Lock(0)));
-    e.push(Box::new(Symbol::LevelExit));
+    e.push(Symbol::LevelEntr);
+    e.push(Symbol::Key(0));
+    e.push(Symbol::Lock(0));
+    e.push(Symbol::LevelExit);
     let rule = symbols::Rule{ start:s, end:e, anchors:(0, 3)};
 
     graph.apply_rule(rule);

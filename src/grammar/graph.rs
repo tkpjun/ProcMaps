@@ -80,7 +80,7 @@ impl<T> Graph<T> {
     }
 
     pub fn remove_node(&mut self, index: usize) {
-        self.data.remove(index);
+        self.data.swap_remove(index);
         for i in 0..self.data.len() {
             /*
             let mut paths = Vec::new();
