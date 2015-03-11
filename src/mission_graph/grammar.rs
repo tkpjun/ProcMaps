@@ -1,8 +1,9 @@
+pub use super::graph;
 pub use super::graph::Graph;
 pub use rand;
 pub use rand::Rng;
 
-#[derive(Eq, PartialEq, Debug)]
+#[derive(Eq, PartialEq, Debug, Copy)]
 pub enum Symbol {
     LevelEntr,
     LevelExit,
@@ -11,25 +12,29 @@ pub enum Symbol {
     Door,
     SecretDoor,
     Key(i32),
-    KeyDoor(Vec<i32>),
+    KeyDoor(i32),
     Lever(i32),
     SecretLever(i32),
-    LeverDoor(Vec<i32>),
+    LeverDoor(i32),
     QuestStart(i32),
     QuestChallenge(i32),
     Boss(i32),
     Combat(i32),
     Loot(i32),
     Powerup(i32),
-    PowerChallenge(Vec<i32>),
+    PowerChallenge(i32),
 }
 
 pub struct Rule {
+    //A linear graph to make search computationally tolerable
     pub start: Vec<Symbol>,
+    //Path types in the start graph: s_paths.len() == start.len() -1
     pub s_paths: Vec<PathType>,
     pub result: Graph<Symbol>,
-    //Indexes of the first and last symbols of the start vec in the result graph
-    pub anchors: (usize, usize),
+    //Indexes of the nodes the result graph is built between
+    //and their corresponding positions in the result graph data type.
+    //Nodes between the two anchors in the original graph are removed.
+    pub anchors: Vec<(usize, usize)>,
 }
 
 pub enum PathType {
@@ -39,61 +44,54 @@ pub enum PathType {
 
 impl Graph<Symbol> {
 
-    /*pub fn apply_rule(&mut self, mut rule: Rule) -> bool {
-        let subs = self.find_sub_indexes(&rule.start, &rule.paths);
+    pub fn apply_rule(&mut self, rule: &Rule) -> bool {
+        let subs = self.find_sub_indexes(&rule.start, &rule.s_paths);
         if subs.len() == 0 {
             return false;
         }
-        let temp = subs.len();
-        let chosen = &subs[rand::thread_rng().gen_range(0, temp)];
-        let last = chosen.len() - 1;
-        if chosen.len() == 2 {
-            self.remove_path(chosen[0], chosen[last]);
+        let len = subs.len();
+        let random = rand::thread_rng().gen_range(0, len);
+        let chosen = &subs[random];
+        let len = self.data.len();
+        if chosen.len() == 2 && rule.anchors.len() == 2 {
+            self.remove_path(chosen[0], chosen[1]);
         }
 
-        let temp = rule.result.len();
-        let mut drain = rule.result.drain();
-        for i in 0..temp {
-            match i {
-                a if a < rule.anchors.0 => {
-                    self.push_node(drain.next().unwrap());
-                    let d_last = self.data.len() - 1;
-                    self.add_path(chosen[0], d_last);
-                },
-                a if a == rule.anchors.0 => {
-                    drain.next();
-                },
-                a if a == rule.anchors.0 + 1 => {
-                    self.push_node(drain.next().unwrap());
-                    let d_last = self.data.len() - 1;
-                    self.add_path(chosen[0], d_last);
-                }
-                a if a < rule.anchors.1 => {
-                    self.push_node(drain.next().unwrap());
-                    let d_last = self.data.len() - 1;
-                    self.add_path(d_last - 1, d_last);
-                }
-                a if a == rule.anchors.1 => {
-                    drain.next();
-                    let d_last = self.data.len() - 1;
-                    self.add_path(chosen[last], d_last);
-                }
-                a if a > rule.anchors.1 => {
-                    self.push_node(drain.next().unwrap());
-                    let d_last = self.data.len() - 1;
-                    self.add_path(chosen[last], d_last);
-                }
-                _ => panic!("Inexhaustive match!")
+        let mut skipped = 0;
+        //Add the end graph sans anchors to self, update anchors
+        for index in 0..rule.result.data.len() {
+            if rule.anchors.iter().all(|&(_,b)| index != b) {
+                let node = &rule.result.data[index];
+                let paths = node.paths.iter().map(|a|{
+                    let opt = rule.anchors.iter().find(|t| *a == t.1);
+                    match opt {
+                        Some(c) => chosen[c.0],
+                        None => a + len - skipped,
+                    }
+                }).collect::<Vec<usize>>();
+                self.push_node(node.value);
+                let last = self.data.len() - 1;
+                self.set_paths(last, &paths);
+            }
+            else {
+                skipped += 1;
+                let tup = rule.anchors.iter().find(|t| t.1 == index).unwrap();
+                //PROBLEM: chosen[tup.0] doesnt necessarily find the anchor if there
+                //was a loose path and chosen.len() > rule.start.len()
+                self.data[chosen[tup.0]].value = rule.result.data[tup.1].value;
+                //let paths = self[chosen[tup.0]].paths
             }
         }
-        if rule.start.len() > 1 {
-            //needs to remove in descending order
-            for i in 1..(chosen.len()-1) {
+
+        //Remove the other nodes
+        if chosen.len() > 2 && rule.anchors.len() == 2 {
+            //needs to remove in descending index order so indexes don't change
+            for i in (rule.anchors[0].0 + 1)..(rule.anchors[1].0) {
                 self.remove_node(chosen[i]);
             }
         }
         true
-    }*/
+    }
 
     fn find_sub_indexes(&self, sub: &Vec<Symbol>, paths: &Vec<PathType>) -> Vec<Vec<usize>> {
         let mut ret: Vec<Vec<usize>> = Vec::new();

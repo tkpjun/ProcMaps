@@ -20,7 +20,7 @@ impl<T> Graph<T> {
         self.data.push(node);
     }
 
-    pub fn add_node_between(&mut self, value: T, first: usize, second: usize) {
+    /*pub fn add_node_between(&mut self, value: T, first: usize, second: usize) {
         let mut node = Node{ value: value, paths: LinkedList::new() };
         node.paths.push_back(first);
         node.paths.push_back(second);
@@ -41,7 +41,7 @@ impl<T> Graph<T> {
             }
         }
         self.set_paths(second, &paths);
-    }
+    }*/
 
     pub fn remove_node(&mut self, index: usize) {
         self.data.swap_remove(index);
@@ -86,10 +86,10 @@ impl<T> Graph<T> {
     }
 
     //Doesnt make sure the opposite end has the same path
-    pub fn set_paths(&mut self, index: usize, to: &[usize]) {
+    pub fn set_paths(&mut self, index: usize, to: &Vec<usize>) {
         self.data[index].paths.clear();
         for i in to {
-            self.add_path(index, *i);
+            self.data[index].paths.push_back(*i);
         }
     }
 
