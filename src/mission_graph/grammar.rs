@@ -75,8 +75,8 @@ impl Graph<Symbol> {
             }
             else {
                 skipped += 1;
-                let tup = rule.anchors.iter().find(|t| t.1 == index).unwrap();
-                self.data[sub_short[tup.0]].value = rule.result.data[tup.1].value.clone();
+                let a_pair = rule.anchors.iter().find(|t| t.1 == index).unwrap();
+                self.data[sub_short[a_pair.0]].value = rule.result.data[a_pair.1].value.clone();
                 //let paths = self[chosen[tup.0]].paths
             }
         }
@@ -107,7 +107,7 @@ impl Graph<Symbol> {
         }
         //for every remaining node of the linear subgraph
         for index in 1..sub.len() {
-            let mut newVecs = Vec::new();
+            let mut new_vecs = Vec::new();
             match paths[index - 1] {
                 //If next path is tight, only search the direct paths
                 PathType::Tight => {
@@ -122,7 +122,7 @@ impl Graph<Symbol> {
                                     let mut new_2 = tup.1.clone();
                                     new.push(*path);
                                     new_2.push(*path);
-                                    newVecs.push((new, new_2));
+                                    new_vecs.push((new, new_2));
                                 }
                                 else {
                                     tup.0.push(*path);
@@ -137,7 +137,7 @@ impl Graph<Symbol> {
                 PathType::Loose => {
                     for tup in &mut ret {
                         let last = tup.0.len() - 1;
-                        let exc = if tup.0[last - 1] >= 0 {tup.0[last - 1]} else {-1};
+                        let exc = if tup.0.len() > 1 {tup.0[last - 1]} else {-1};
                         let test = self.bfs(tup.0[last], exc, &sub[index]);
                         match test {
                             Some(a) => {
@@ -156,7 +156,7 @@ impl Graph<Symbol> {
                 y.len() == index + 1
             }).collect::<Vec<(Vec<usize>, Vec<usize>)>>();
             //add the new post-branch test vectors
-            for vec in newVecs.drain() {
+            for vec in new_vecs.drain() {
                 ret.push(vec);
             }
         }

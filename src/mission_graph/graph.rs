@@ -129,7 +129,7 @@ impl<T: Eq> Graph<T> {
         let mut search = vec![TreeNode{val: start, parent: 0}];
         let mut marked = vec![exclude];
         let mut i = 0;
-        let buildRet = |space: &Vec<TreeNode<usize>>| -> Option<Vec<usize>> {
+        let build_ret = |space: &Vec<TreeNode<usize>>| -> Option<Vec<usize>> {
             let index = space.len() - 1;
             let mut ret = vec![space[index].val];
             let mut next = space[index].parent;
@@ -144,7 +144,7 @@ impl<T: Eq> Graph<T> {
             for path in &self.data[search[i].val].paths {
                 if self.data[*path].value == *target {
                     search.push(TreeNode{val: *path, parent: i});
-                    return buildRet(&search);
+                    return build_ret(&search);
                 }
                 if marked.iter().all(|a| *a != *path) {
                     marked.push(*path);
