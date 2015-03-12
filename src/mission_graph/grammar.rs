@@ -2,6 +2,7 @@ pub use super::graph;
 pub use super::graph::Graph;
 pub use rand;
 pub use rand::Rng;
+pub use std::collections::linked_list::LinkedList;
 
 #[derive(Eq, PartialEq, Debug, Clone)]
 pub enum Symbol {
@@ -57,7 +58,7 @@ impl Graph<Symbol> {
             self.remove_path(sub[0], sub[1]);
         }
 
-        let mut skipped = 0;
+        let mut anchors_passed_over = 0;
         //Add the end graph sans anchors to self, update anchors
         for index in 0..rule.result.data.len() {
             if rule.anchors.iter().all(|&(_,b)| index != b) {
@@ -66,7 +67,7 @@ impl Graph<Symbol> {
                     let opt = rule.anchors.iter().find(|t| *a == t.1);
                     match opt {
                         Some(c) => sub_short[c.0],
-                        None => a + len - skipped,
+                        None => a + len - anchors_passed_over,
                     }
                 }).collect::<Vec<usize>>();
                 self.push_node(node.value.clone());
@@ -74,10 +75,14 @@ impl Graph<Symbol> {
                 self.set_paths(last, &paths);
             }
             else {
-                skipped += 1;
                 let a_pair = rule.anchors.iter().find(|t| t.1 == index).unwrap();
                 self.data[sub_short[a_pair.0]].value = rule.result.data[a_pair.1].value.clone();
-                //let paths = self[chosen[tup.0]].paths
+                //add the rule result paths to the node in self
+                let mut res_paths = rule.result.data[a_pair.1].paths.iter().map(|a|{
+                    *a + len - 1//BUG: Minus anchors passed over when the data point was added
+                }).collect::<LinkedList<usize>>();
+                self.data[sub_short[a_pair.0]].paths.append(&mut res_paths);
+                anchors_passed_over += 1;
             }
         }
 
@@ -152,7 +157,7 @@ impl Graph<Symbol> {
                 }
             }
             //remove the test vectors that had no path to the next searched symbol
-            ret = ret.into_iter().filter(|&(ref x, ref y)|{
+            ret = ret.into_iter().filter(|&(_, ref y)|{
                 y.len() == index + 1
             }).collect::<Vec<(Vec<usize>, Vec<usize>)>>();
             //add the new post-branch test vectors
