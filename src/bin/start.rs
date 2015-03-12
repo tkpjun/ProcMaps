@@ -18,7 +18,7 @@ fn main() {
     let mut e = graph::Graph::new();
     e.push_node(Symbol::LevelEntr);
     e.push_node(Symbol::Key(0));
-    e.push_node(Symbol::KeyDoor(0));
+    e.push_node(Symbol::KeyDoor(vec![0]));
     e.push_node(Symbol::LevelExit);
     let p = vec![PathType::Tight];
     let rule = grammar::Rule{ start:s, s_paths:p, result:e, anchors:vec![(0, 0), (1, 3)]};

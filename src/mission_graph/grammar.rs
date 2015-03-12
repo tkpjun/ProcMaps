@@ -3,7 +3,7 @@ pub use super::graph::Graph;
 pub use rand;
 pub use rand::Rng;
 
-#[derive(Eq, PartialEq, Debug, Copy)]
+#[derive(Eq, PartialEq, Debug, Clone)]
 pub enum Symbol {
     LevelEntr,
     LevelExit,
@@ -12,17 +12,17 @@ pub enum Symbol {
     Door,
     SecretDoor,
     Key(i32),
-    KeyDoor(i32),
+    KeyDoor(Vec<i32>),
     Lever(i32),
     SecretLever(i32),
-    LeverDoor(i32),
+    LeverDoor(Vec<i32>),
     QuestStart(i32),
-    QuestChallenge(i32),
+    QuestTest(i32),
     Boss(i32),
     Combat(i32),
     Loot(i32),
     Powerup(i32),
-    PowerChallenge(i32),
+    PowerTest(Vec<i32>),
 }
 
 pub struct Rule {
@@ -51,10 +51,10 @@ impl Graph<Symbol> {
         }
         let len = subs.len();
         let random = rand::thread_rng().gen_range(0, len);
-        let chosen = &subs[random];
+        let &(ref sub, ref sub_short) = &subs[random];
         let len = self.data.len();
-        if chosen.len() == 2 && rule.anchors.len() == 2 {
-            self.remove_path(chosen[0], chosen[1]);
+        if sub.len() == 2 {
+            self.remove_path(sub[0], sub[1]);
         }
 
         let mut skipped = 0;
@@ -65,41 +65,41 @@ impl Graph<Symbol> {
                 let paths = node.paths.iter().map(|a|{
                     let opt = rule.anchors.iter().find(|t| *a == t.1);
                     match opt {
-                        Some(c) => chosen[c.0],
+                        Some(c) => sub_short[c.0],
                         None => a + len - skipped,
                     }
                 }).collect::<Vec<usize>>();
-                self.push_node(node.value);
+                self.push_node(node.value.clone());
                 let last = self.data.len() - 1;
                 self.set_paths(last, &paths);
             }
             else {
                 skipped += 1;
                 let tup = rule.anchors.iter().find(|t| t.1 == index).unwrap();
-                //PROBLEM: chosen[tup.0] doesnt necessarily find the anchor if there
-                //was a loose path and chosen.len() > rule.start.len()
-                self.data[chosen[tup.0]].value = rule.result.data[tup.1].value;
+                self.data[sub_short[tup.0]].value = rule.result.data[tup.1].value.clone();
                 //let paths = self[chosen[tup.0]].paths
             }
         }
 
         //Remove the other nodes
-        if chosen.len() > 2 && rule.anchors.len() == 2 {
+        if sub.len() > 2 && rule.anchors.len() == 2 {
             //needs to remove in descending index order so indexes don't change
-            for i in (rule.anchors[0].0 + 1)..(rule.anchors[1].0) {
-                self.remove_node(chosen[i]);
-            }
+            /*for i in (rule.anchors[0].0 + 1)..(rule.anchors[1].0) {
+                self.remove_node(sub[i]);
+            }*/
         }
         true
     }
 
-    fn find_sub_indexes(&self, sub: &Vec<Symbol>, paths: &Vec<PathType>) -> Vec<Vec<usize>> {
-        let mut ret: Vec<Vec<usize>> = Vec::new();
+    fn find_sub_indexes(&self, sub: &Vec<Symbol>, paths: &Vec<PathType>) -> Vec<(Vec<usize>, Vec<usize>)> {
+        let mut ret: Vec<(Vec<usize>, Vec<usize>)> = Vec::new();
         for i in 0..self.data.len() {
             let mut try = Vec::new();
+            let mut try2 = Vec::new();
             if self.data[i].value == sub[0] {
                 try.push(i);
-                ret.push(try);
+                try2.push(i);
+                ret.push((try, try2));
             }
         }
         if sub.len() == 1 {
@@ -111,19 +111,22 @@ impl Graph<Symbol> {
             match paths[index - 1] {
                 //If next path is tight, only search the direct paths
                 PathType::Tight => {
-                    for vec in &mut ret {
-                        let last = vec.len() - 1;
+                    for tup in &mut ret {
+                        let last = tup.0.len() - 1;
                         let mut found1 = false;
-                        for path in &self.data[vec[last]].paths {
+                        for path in &self.data[tup.0[last]].paths {
                             if self.data[*path].value == sub[index] &&
-                               vec.iter().all(|x| *x != *path) {
+                               tup.1.iter().all(|x| *x != *path) {
                                 if found1 {
-                                    let mut new = vec.clone();
+                                    let mut new = tup.0.clone();
+                                    let mut new_2 = tup.1.clone();
                                     new.push(*path);
-                                    newVecs.push(new);
+                                    new_2.push(*path);
+                                    newVecs.push((new, new_2));
                                 }
                                 else {
-                                    vec.push(*path);
+                                    tup.0.push(*path);
+                                    tup.1.push(*path);
                                     found1 = true;
                                 }
                             }
@@ -132,15 +135,16 @@ impl Graph<Symbol> {
                 }
                 //If next path is loose, search with Breadth-First-Search
                 PathType::Loose => {
-                    for vec in &mut ret {
-                        let last = vec.len() - 1;
-                        let exc = if vec[last - 1] >= 0 {vec[last - 1]} else {-1};
-                        let test = self.bfs(vec[last], exc, &sub[index]);
+                    for tup in &mut ret {
+                        let last = tup.0.len() - 1;
+                        let exc = if tup.0[last - 1] >= 0 {tup.0[last - 1]} else {-1};
+                        let test = self.bfs(tup.0[last], exc, &sub[index]);
                         match test {
                             Some(a) => {
-                                for i in a.iter().rev() {
-                                    vec.push(*i);
+                                for i in a.into_iter().rev() {
+                                    tup.0.push(i);
                                 }
+                                tup.1.push(tup.0[tup.0.len() - 1]);
                             }
                             None => {}
                         }
@@ -148,11 +152,9 @@ impl Graph<Symbol> {
                 }
             }
             //remove the test vectors that had no path to the next searched symbol
-            //BUG: too lenient if there are two of the same symbol in a row
-            ret = ret.into_iter().filter(|x|{
-                let last = x.len() - 1;
-                self.data[x[last]].value == sub[index]
-            }).collect::<Vec<Vec<usize>>>();
+            ret = ret.into_iter().filter(|&(ref x, ref y)|{
+                y.len() == index + 1
+            }).collect::<Vec<(Vec<usize>, Vec<usize>)>>();
             //add the new post-branch test vectors
             for vec in newVecs.drain() {
                 ret.push(vec);
