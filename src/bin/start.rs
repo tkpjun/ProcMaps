@@ -22,7 +22,7 @@ fn main() {
     e.add_path(1, 2);
     e.add_path(2, 3);
     let p = vec![PathType::Tight];
-    let rule = grammar::Rule{ start:s, s_paths:p, result:e, anchors:vec![(0, 0), (1, 3)]};
+    let rule = grammar::Rule{ start:s, s_paths:p, result:e, anchor:((0, 0),(1, 3))};
 
     //graph.apply_rule(rule);
     graph.apply_rule(&rule);

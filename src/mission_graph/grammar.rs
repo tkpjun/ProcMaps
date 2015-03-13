@@ -32,10 +32,10 @@ pub struct Rule {
     //Path types in the start graph: s_paths.len() == start.len() -1
     pub s_paths: Vec<PathType>,
     pub result: Graph<Symbol>,
-    //Indexes of the nodes the result graph is built between
-    //and their corresponding positions in the result graph data type.
+    //0: Index of a node in the start graph and its position in the result graph.
+    //1: Offset of a 2nd node; 0 means only one anchor node.
     //Nodes between the two anchors in the original graph are removed.
-    pub anchors: Vec<(usize, usize)>,
+    pub anchor: ((usize, usize), (isize, usize)),
 }
 
 pub enum PathType {
@@ -52,22 +52,30 @@ impl Graph<Symbol> {
         }
         let len = subs.len();
         let random = rand::thread_rng().gen_range(0, len);
-        let &(ref sub, ref sub_short) = &subs[random];
+        let &(ref sub_i, ref sub_i_i) = &subs[random];
         let len = self.data.len();
-        if sub.len() == 2 {
-            self.remove_path(sub[0], sub[1]);
+        if sub_i.len() == 2 {
+            self.remove_path(sub_i[0], sub_i[1]);
         }
+        let n1_s = sub_i_i[(rule.anchor.0).0];
+        let n1_e = (rule.anchor.0).1;
+        let n2_s = (sub_i_i[(rule.anchor.0).0] as isize + (rule.anchor.1).0) as usize;
+        let n2_e = (rule.anchor.1).1;
 
         let mut anchors_passed_over = 0;
         //Add the end graph sans anchors to self, update anchors
         for index in 0..rule.result.data.len() {
-            if rule.anchors.iter().all(|&(_,b)| index != b) {
+            if n1_e != index && n2_e != index {
                 let node = &rule.result.data[index];
                 let paths = node.paths.iter().map(|a|{
-                    let opt = rule.anchors.iter().find(|t| *a == t.1);
-                    match opt {
-                        Some(c) => sub_short[c.0],
-                        None => a + len - anchors_passed_over,
+                    if n1_e == *a {
+                        sub_i[n1_s]
+                    }
+                    else if n2_e == *a {
+                        sub_i[n2_s]
+                    }
+                    else {
+                        a + len - anchors_passed_over
                     }
                 }).collect::<Vec<usize>>();
                 self.push_node(node.value.clone());
@@ -75,19 +83,24 @@ impl Graph<Symbol> {
                 self.set_paths(last, &paths);
             }
             else {
-                let a_pair = rule.anchors.iter().find(|t| t.1 == index).unwrap();
-                self.data[sub_short[a_pair.0]].value = rule.result.data[a_pair.1].value.clone();
-                //add the rule result paths to the node in self
-                let mut res_paths = rule.result.data[a_pair.1].paths.iter().map(|a|{
+                let a_pair = if n1_e == index {
+                    (n1_s, n1_e)
+                }
+                else {
+                    (n2_s, n2_e)
+                };
+                let node = &rule.result.data[a_pair.1];
+                self.data[sub_i[a_pair.0]].value = node.value.clone();
+                let mut res_paths = node.paths.iter().map(|a|{
                     *a + len - 1//BUG: Minus anchors passed over when the data point was added
                 }).collect::<LinkedList<usize>>();
-                self.data[sub_short[a_pair.0]].paths.append(&mut res_paths);
+                self.data[sub_i[a_pair.0]].paths.append(&mut res_paths);
                 anchors_passed_over += 1;
             }
         }
 
         //Remove the other nodes
-        if sub.len() > 2 && rule.anchors.len() == 2 {
+        if sub_i.len() > 2 {
             //needs to remove in descending index order so indexes don't change
             /*for i in (rule.anchors[0].0 + 1)..(rule.anchors[1].0) {
                 self.remove_node(sub[i]);
@@ -100,11 +113,11 @@ impl Graph<Symbol> {
         let mut ret: Vec<(Vec<usize>, Vec<usize>)> = Vec::new();
         for i in 0..self.data.len() {
             let mut try = Vec::new();
-            let mut try2 = Vec::new();
+            let mut try_i = Vec::new();
             if self.data[i].value == sub[0] {
                 try.push(i);
-                try2.push(i);
-                ret.push((try, try2));
+                try_i.push(0);
+                ret.push((try, try_i));
             }
         }
         if sub.len() == 1 {
@@ -124,14 +137,14 @@ impl Graph<Symbol> {
                                tup.1.iter().all(|x| *x != *path) {
                                 if found1 {
                                     let mut new = tup.0.clone();
-                                    let mut new_2 = tup.1.clone();
+                                    let mut new_i = tup.1.clone();
+                                    new_i.push(new.len());
                                     new.push(*path);
-                                    new_2.push(*path);
-                                    new_vecs.push((new, new_2));
+                                    new_vecs.push((new, new_i));
                                 }
                                 else {
+                                    tup.1.push(tup.0.len());
                                     tup.0.push(*path);
-                                    tup.1.push(*path);
                                     found1 = true;
                                 }
                             }
@@ -149,7 +162,7 @@ impl Graph<Symbol> {
                                 for i in a.into_iter().rev() {
                                     tup.0.push(i);
                                 }
-                                tup.1.push(tup.0[tup.0.len() - 1]);
+                                tup.1.push(tup.0.len() - 1);
                             }
                             None => {}
                         }
