@@ -36,7 +36,7 @@ pub struct Rule {
     //0: Index of a node in the start graph and its position in the result graph.
     //1: Offset of a 2nd node; 0 means only one anchor node.
     //Nodes between the two anchors in the original graph are removed.
-    pub anchor: ((usize, usize), (isize, Anchor)),
+    pub anchor: ((usize, usize), isize, Anchor),
 }
 
 pub enum PathType {
@@ -62,12 +62,12 @@ impl Graph<Symbol> {
         let len = self.data.len();
         let n1_s = sub_i_i[(rule.anchor.0).0];
         let n1_e = (rule.anchor.0).1;
-        let n2_s = (sub_i_i[(rule.anchor.0).0] as isize + (rule.anchor.1).0) as usize;
-        let n2_in_res = match (rule.anchor.1).1 {
+        let n2_s = (sub_i_i[(rule.anchor.0).0] as isize + rule.anchor.1) as usize;
+        let n2_in_res = match rule.anchor.2 {
             Anchor::Is(_) => true,
             _ => false
         };
-        let n2_e = match (rule.anchor.1).1 {
+        let n2_e = match rule.anchor.2 {
             Anchor::Is(a) => a,
             Anchor::Connected(a) => a
         };
@@ -75,7 +75,7 @@ impl Graph<Symbol> {
         if sub_i.len() == 2 {
             self.remove_path(sub_i[0], sub_i[1]);
         }
-        else if (rule.anchor.1).0.abs() == 1 {
+        else if rule.anchor.1.abs() == 1 {
             self.remove_path(sub_i[n1_s], sub_i[n2_s]);
         }
         let mut anchors_passed_over = 0;

@@ -23,7 +23,7 @@ fn main() {
     e.push_node(Symbol::KeyDoor(vec![0]));
     e.add_path(0, 1);
     e.add_path(1, 2);
-    let rule = grammar::Rule{ start:s, s_paths:p, result:e, anchor:((0, 0),(1, Anchor::Connected(2)))};
+    let rule = grammar::Rule{ start:s, s_paths:p, result:e, anchor:((0, 0), 1, Anchor::Connected(2))};
 
     graph.apply_rule(&rule);
     println!("After:\n{}", graph.to_string());
