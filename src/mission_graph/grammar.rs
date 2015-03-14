@@ -1,4 +1,3 @@
-use super::graph;
 use super::graph::Graph;
 use rand;
 use rand::Rng;
@@ -120,13 +119,17 @@ impl Graph<Symbol> {
                     else {
                         (n2_s, n2_e)
                     };
+                    anchors_passed_over.push(index);
                     let node = &rule.result.data[a_pair.1];
                     self.data[sub_i[a_pair.0]].value = node.value.clone();
+                    let mut i = -1;
                     let mut res_paths = node.paths.iter().map(|a|{
-                        *a + len - 1//BUG: Minus anchors passed over when the data point was added
+                        i += 1;
+                        let neg = if *a > anchors_passed_over[0] {1} else {0};
+                        //BUG: doesn't work correctly if the 2nd anchor isn't the last node
+                        *a + len - neg
                     }).collect::<LinkedList<usize>>();
                     self.data[sub_i[a_pair.0]].paths.append(&mut res_paths);
-                    anchors_passed_over.push(index);
                 }
             }
         }
@@ -150,14 +153,17 @@ impl Graph<Symbol> {
                     }
                 }
                 else {
+                    anchors_passed_over.push(index);
                     let a_pair = (n1_s, n1_e);
                     let node = &rule.result.data[a_pair.1];
                     self.data[sub_i[a_pair.0]].value = node.value.clone();
+                    let mut i = -1;
                     let mut res_paths = node.paths.iter().map(|a|{
-                        *a + len - 1//BUG: Minus anchors passed over when the data point was added
+                        i += 1;
+                        let neg = if *a > anchors_passed_over[0] {1} else {0};
+                        *a + len - neg
                     }).collect::<LinkedList<usize>>();
                     self.data[sub_i[a_pair.0]].paths.append(&mut res_paths);
-                    anchors_passed_over.push(index)
                 }
             }
         }
@@ -178,14 +184,17 @@ impl Graph<Symbol> {
                     self.set_paths(last, &paths);
                 }
                 else {
+                    anchors_passed_over.push(index);
                     let a_pair = (n1_s, n1_e);
                     let node = &rule.result.data[a_pair.1];
                     self.data[sub_i[a_pair.0]].value = node.value.clone();
+                    let mut i = -1;
                     let mut res_paths = node.paths.iter().map(|a|{
-                        *a + len //BUG: Minus anchors passed over when the data point was added
+                        i += 1;
+                        let neg = if *a > anchors_passed_over[0] {1} else {0};
+                        *a + len - neg
                     }).collect::<LinkedList<usize>>();
                     self.data[sub_i[a_pair.0]].paths.append(&mut res_paths);
-                    anchors_passed_over.push(index)
                 }
             }
         }
