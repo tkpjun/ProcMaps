@@ -1,6 +1,6 @@
 extern crate proc_maps;
 
-pub use proc_maps::mission_graph::graph;
+pub use proc_maps::graph_grammar::graph;
 pub use proc_maps::mission_graph::grammar;
 pub use proc_maps::mission_graph::grammar::Symbol;
 pub use proc_maps::mission_graph::grammar::PathType;

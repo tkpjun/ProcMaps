@@ -1,9 +1,7 @@
-use super::graph;
-use super::graph::Graph;
+use graph_grammar::graph::Graph;
 use rand;
 use rand::Rng;
 use std::collections::linked_list::LinkedList;
-use std::num::SignedInt;
 
 #[derive(Eq, PartialEq, Debug, Clone)]
 pub enum Symbol {
@@ -59,7 +57,7 @@ impl Graph<Symbol> {
         let len = subs.len();
         let random = rand::thread_rng().gen_range(0, len);
         let &(ref sub_i, ref sub_i_i) = &subs[random];
-        let len = self.data.len();
+        let len = self.nodes();
         let n2_exists = match rule.anchor.1 {
             None => false,
             _ => true
@@ -95,9 +93,9 @@ impl Graph<Symbol> {
         let mut anchors_passed_over = Vec::new();
         //Add the end graph sans anchors to self, update anchors
         if n2_in_res {
-            for index in 0..rule.result.data.len() {
+            for index in 0..rule.result.nodes() {
                 if n1_e != index && n2_e != index {
-                    let node = &rule.result.data[index];
+                    let node = rule.result.get_node(index);
                     let paths = node.paths.iter().map(|a|{
                         if n1_e == *a {
                             sub_i[n1_s]
@@ -110,7 +108,7 @@ impl Graph<Symbol> {
                         }
                     }).collect::<Vec<usize>>();
                     self.push_node(node.value.clone());
-                    let last = self.data.len() - 1;
+                    let last = self.nodes() - 1;
                     self.set_paths(last, &paths);
                 }
                 else {
@@ -120,20 +118,20 @@ impl Graph<Symbol> {
                     else {
                         (n2_s, n2_e)
                     };
-                    let node = &rule.result.data[a_pair.1];
-                    self.data[sub_i[a_pair.0]].value = node.value.clone();
+                    let node = rule.result.get_node(a_pair.1);
+                    self.mut_node(sub_i[a_pair.0]).value = node.value.clone();
                     let mut res_paths = node.paths.iter().map(|a|{
                         *a + len - 1//BUG: Minus anchors passed over when the data point was added
                     }).collect::<LinkedList<usize>>();
-                    self.data[sub_i[a_pair.0]].paths.append(&mut res_paths);
+                    self.mut_node(sub_i[a_pair.0]).paths.append(&mut res_paths);
                     anchors_passed_over.push(index);
                 }
             }
         }
         else if n2_exists {
-            for index in 0..rule.result.data.len() {
+            for index in 0..rule.result.nodes() {
                 if n1_e != index {
-                    let node = &rule.result.data[index];
+                    let node = &rule.result.get_node(index);
                     let paths = node.paths.iter().map(|a|{
                         if n1_e == *a {
                             sub_i[n1_s]
@@ -143,7 +141,7 @@ impl Graph<Symbol> {
                         }
                     }).collect::<Vec<usize>>();
                     self.push_node(node.value.clone());
-                    let last = self.data.len() - 1;
+                    let last = self.nodes() - 1;
                     self.set_paths(last, &paths);
                     if index == n2_e{
                         self.add_path(last, n2_s);
@@ -151,20 +149,20 @@ impl Graph<Symbol> {
                 }
                 else {
                     let a_pair = (n1_s, n1_e);
-                    let node = &rule.result.data[a_pair.1];
-                    self.data[sub_i[a_pair.0]].value = node.value.clone();
+                    let node = &rule.result.get_node(a_pair.1);
+                    self.mut_node(sub_i[a_pair.0]).value = node.value.clone();
                     let mut res_paths = node.paths.iter().map(|a|{
                         *a + len - 1//BUG: Minus anchors passed over when the data point was added
                     }).collect::<LinkedList<usize>>();
-                    self.data[sub_i[a_pair.0]].paths.append(&mut res_paths);
+                    self.mut_node(sub_i[a_pair.0]).paths.append(&mut res_paths);
                     anchors_passed_over.push(index)
                 }
             }
         }
         else {
-            for index in 0..rule.result.data.len() {
+            for index in 0..rule.result.nodes() {
                 if n1_e != index {
-                    let node = &rule.result.data[index];
+                    let node = &rule.result.get_node(index);
                     let paths = node.paths.iter().map(|a|{
                         if n1_e == *a {
                             sub_i[n1_s]
@@ -174,17 +172,17 @@ impl Graph<Symbol> {
                         }
                     }).collect::<Vec<usize>>();
                     self.push_node(node.value.clone());
-                    let last = self.data.len() - 1;
+                    let last = self.nodes() - 1;
                     self.set_paths(last, &paths);
                 }
                 else {
                     let a_pair = (n1_s, n1_e);
-                    let node = &rule.result.data[a_pair.1];
-                    self.data[sub_i[a_pair.0]].value = node.value.clone();
+                    let node = &rule.result.get_node(a_pair.1);
+                    self.mut_node(sub_i[a_pair.0]).value = node.value.clone();
                     let mut res_paths = node.paths.iter().map(|a|{
                         *a + len //BUG: Minus anchors passed over when the data point was added
                     }).collect::<LinkedList<usize>>();
-                    self.data[sub_i[a_pair.0]].paths.append(&mut res_paths);
+                    self.mut_node(sub_i[a_pair.0]).paths.append(&mut res_paths);
                     anchors_passed_over.push(index)
                 }
             }
@@ -202,10 +200,10 @@ impl Graph<Symbol> {
 
     fn find_sub_indexes(&self, sub: &Vec<Symbol>, paths: &Vec<PathType>) -> Vec<(Vec<usize>, Vec<usize>)> {
         let mut ret: Vec<(Vec<usize>, Vec<usize>)> = Vec::new();
-        for i in 0..self.data.len() {
+        for i in 0..self.nodes() {
             let mut try = Vec::new();
             let mut try_i = Vec::new();
-            if self.data[i].value == sub[0] {
+            if self.get_node(i).value == sub[0] {
                 try.push(i);
                 try_i.push(0);
                 ret.push((try, try_i));
@@ -223,8 +221,8 @@ impl Graph<Symbol> {
                     for tup in &mut ret {
                         let last = tup.0.len() - 1;
                         let mut found1 = false;
-                        for path in &self.data[tup.0[last]].paths {
-                            if self.data[*path].value == sub[index] &&
+                        for path in &self.get_node(tup.0[last]).paths {
+                            if self.get_node(*path).value == sub[index] &&
                                tup.1.iter().all(|x| *x != *path) {
                                 if found1 {
                                     let mut new = tup.0.clone();
@@ -265,24 +263,10 @@ impl Graph<Symbol> {
                 y.len() == index + 1
             }).collect::<Vec<(Vec<usize>, Vec<usize>)>>();
             //add the new post-branch test vectors
-            for vec in new_vecs.drain() {
+            for vec in new_vecs.into_iter() {
                 ret.push(vec);
             }
         }
         return ret;
-    }
-}
-
-impl ToString for Graph<Symbol> {
-    fn to_string(&self) -> String {
-        let mut s = String::new();
-        for node in &self.data {
-            s = s + &*format!("{:?}", node.value);
-            for path in &node.paths {
-                s = s + " -> " + &*path.to_string();
-            }
-            s = s + "\n";
-        }
-        s
     }
 }
