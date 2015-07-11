@@ -121,7 +121,9 @@ impl Graph<Symbol> {
                     let node = rule.result.get_node(a_pair.1);
                     self.mut_node(sub_i[a_pair.0]).value = node.value.clone();
                     let mut res_paths = node.paths.iter().map(|a|{
-                        *a + len - 1//BUG: Minus anchors passed over when the data point was added
+                        let neg = if *a > anchors_passed_over[0] {1} else {0};
+                        //BUG: doesn't work correctly if the 2nd anchor isn't the last node
+                        *a + len - neg
                     }).collect::<LinkedList<usize>>();
                     self.mut_node(sub_i[a_pair.0]).paths.append(&mut res_paths);
                     anchors_passed_over.push(index);
@@ -148,11 +150,13 @@ impl Graph<Symbol> {
                     }
                 }
                 else {
+                    anchors_passed_over.push(index);
                     let a_pair = (n1_s, n1_e);
                     let node = &rule.result.get_node(a_pair.1);
                     self.mut_node(sub_i[a_pair.0]).value = node.value.clone();
                     let mut res_paths = node.paths.iter().map(|a|{
-                        *a + len - 1//BUG: Minus anchors passed over when the data point was added
+                        let neg = if *a > anchors_passed_over[0] {1} else {0};
+                        *a + len - neg
                     }).collect::<LinkedList<usize>>();
                     self.mut_node(sub_i[a_pair.0]).paths.append(&mut res_paths);
                     anchors_passed_over.push(index)
@@ -176,11 +180,13 @@ impl Graph<Symbol> {
                     self.set_paths(last, &paths);
                 }
                 else {
+                    anchors_passed_over.push(index);
                     let a_pair = (n1_s, n1_e);
                     let node = &rule.result.get_node(a_pair.1);
                     self.mut_node(sub_i[a_pair.0]).value = node.value.clone();
                     let mut res_paths = node.paths.iter().map(|a|{
-                        *a + len //BUG: Minus anchors passed over when the data point was added
+                        let neg = if *a > anchors_passed_over[0] {1} else {0};
+                        *a + len - neg
                     }).collect::<LinkedList<usize>>();
                     self.mut_node(sub_i[a_pair.0]).paths.append(&mut res_paths);
                     anchors_passed_over.push(index)
