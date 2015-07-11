@@ -1,16 +1,24 @@
 use std::collections::linked_list::LinkedList;
 use std::fmt::Debug;
 
+#[derive(Clone)]
 pub struct DirectedNode<NodeType: Eq + Clone, EdgeType: Eq + Clone> {
-    pub value: NodeType,
+    pub label: NodeType,
     pub to: LinkedList<Edge<EdgeType>>,
     pub from: LinkedList<usize>,
 }
 
+#[derive(Clone)]
 pub struct Edge<T: Eq + Clone> {
-    pub value: T,
+    pub label: T,
     pub from: usize,
     pub to: usize,
+}
+
+impl<T: Eq + Clone> Edge<T> {
+    pub fn matches(&self, other: (usize, usize)) -> bool {
+        (self.from, self.to) == other
+    }
 }
 
 pub struct DirectedGraph<NodeType: Eq + Clone, EdgeType: Eq + Clone> {
@@ -27,8 +35,8 @@ impl<T: Eq + Clone, S: Eq + Clone> DirectedGraph<T, S> {
         self.data.len()
     }
 
-    pub fn push_node(&mut self, value: T) {
-        let node = DirectedNode{ value: value, to: LinkedList::new(), from: LinkedList::new() };
+    pub fn push_node(&mut self, label: T) {
+        let node = DirectedNode{ label: label, to: LinkedList::new(), from: LinkedList::new() };
         self.data.push(node);
     }
 
@@ -43,6 +51,12 @@ impl<T: Eq + Clone, S: Eq + Clone> DirectedGraph<T, S> {
     pub fn remove_node(&mut self, index: usize) {
         let last = self.nodes() - 1;
 
+        for e in self.data[index].to.iter().map(|edge| edge.to).collect::<Vec<usize>>() {
+            self.data[e].from = self.data[e].from.iter()
+                .filter(|&edge| *edge != index)
+                .map(|&edge| edge)
+                .collect();
+        }
         for i in self.data[index].from.clone() {
             let mut indexes = None;
             for edge in self.data[i].to.iter() {
@@ -51,17 +65,11 @@ impl<T: Eq + Clone, S: Eq + Clone> DirectedGraph<T, S> {
                 }
             }
             match indexes {
-                Some(tup) => self.remove_path(tup.0, tup.1),
+                Some(tup) => self.remove_edge(tup.0, tup.1),
                 _ => {}
             };
         }
-        for e in self.data[index].to.iter().map(|edge| edge.from).collect::<Vec<usize>>() {
-            self.data[e].from = self.data[e].from.iter()
-                .filter(|&edge| *edge != index)
-                .map(|&edge| edge)
-                .collect();
-        }
-        'outer: for i in self.data[self.nodes() - 1].from.clone() {
+        'outer: for i in self.data[last].from.clone() {
             let mut iter = self.data[i].to.iter_mut();
             let mut next = iter.next();
             'inner: while next.is_some() {
@@ -73,7 +81,7 @@ impl<T: Eq + Clone, S: Eq + Clone> DirectedGraph<T, S> {
                 next = iter.next();
             }
         }
-        'o: for e in self.data[self.nodes() - 1].to.iter().map(|edge| edge.from).collect::<Vec<usize>>() {
+        'o: for e in self.data[last].to.iter().map(|edge| edge.from).collect::<Vec<usize>>() {
             let mut iter = self.data[e].from.iter_mut();
             let mut next = iter.next();
             'i: while next.is_some() {
@@ -89,29 +97,30 @@ impl<T: Eq + Clone, S: Eq + Clone> DirectedGraph<T, S> {
     }
 
     //Doesnt make sure the opposite end has the same path
-    pub fn set_paths(&mut self, index: usize, edges: Vec<Edge<S>>) {
+    pub fn set_edges(&mut self, index: usize, edges: &[Edge<S>]) {
         self.data[index].from.clear();
         self.data[index].to.clear();
         for edge in edges {
             let from = edge.from;
             let to = edge.to;
-            self.data[edge.from].to.push_back(edge);
+            self.data[edge.from].to.push_back(edge.clone());
             self.data[to].from.push_back(from);
         }
     }
 
-    pub fn add_path(&mut self, from: usize, to: usize, value: S, is_directed: bool) {
-        let edge = Edge{value: value.clone(), from: from, to: to};
+    pub fn add_edge(&mut self, from: usize, to: usize, label: S, is_directed: bool) {
+        let edge = Edge{label: label.clone(), from: from, to: to};
         self.data[from].to.push_back(edge);
         self.data[to].from.push_back(from);
         if !is_directed {
-            let edge = Edge{value: value, from: to, to: from};
+            let edge = Edge{label: label, from: to, to: from};
             self.data[to].to.push_back(edge);
-            self.data[from].from.push_back(from);
+            self.data[from].from.push_back(to);
         }
     }
 
-    pub fn remove_path(&mut self, from: usize, to: usize) {
+    pub fn remove_edge(&mut self, from: usize, to: usize) {
+        //println!("{}, {}", from, to);
         let mut i = 0;
         for p in &mut self.data[from].to {
             if p.to == to {
@@ -119,9 +128,10 @@ impl<T: Eq + Clone, S: Eq + Clone> DirectedGraph<T, S> {
             }
             i += 1;
         }
-        let mut end = self.data[from].from.split_off(i);
+        //println!("{} from {:?}", i, self.data[from].to.iter().map(|a| a.to).collect::<LinkedList<usize>>());
+        let mut end = self.data[from].to.split_off(i);
         end.pop_front();
-        self.data[from].from.append(&mut end);
+        self.data[from].to.append(&mut end);
 
         i = 0;
         for p in &mut self.data[to].from {
@@ -130,9 +140,10 @@ impl<T: Eq + Clone, S: Eq + Clone> DirectedGraph<T, S> {
             }
             i += 1;
         }
-        let mut end = self.data[to].to.split_off(i);
+        //println!("{} from {:?}", i, self.data[to].from);
+        let mut end = self.data[to].from.split_off(i);
         end.pop_front();
-        self.data[to].to.append(&mut end);
+        self.data[to].from.append(&mut end);
     }
 
     //Returns the shortest path to the target in reverse: target is result[0].
@@ -153,7 +164,7 @@ impl<T: Eq + Clone, S: Eq + Clone> DirectedGraph<T, S> {
         let mut i = 0;
         while i <= search.len() {
             for path in &self.data[search[i].val].to {
-                if self.data[path.to].value == *target {
+                if self.data[path.to].label == *target {
                     search.push(ListNode{val: path.to, prev: i});
                     return build_ret(&search);
                 }
@@ -172,16 +183,19 @@ impl<T: Debug + Eq + Clone, S: Eq + Clone> ToString for DirectedGraph<T, S> {
     fn to_string(&self) -> String {
         let mut s = String::new();
         for node in &self.data {
-            s = s + &*format!("{:?}", node.value);
+            for path in &node.from {
+                s = s + &*path.to_string() + ",";
+            }
+            s = s + &*format!("-> {:?} -> ", node.label);
             for path in &node.to {
-                s = s + " -> " + &*path.to.to_string();
+                s = s + &*path.to.to_string() + ",";
             }
             s = s + "\n";
         }
         s
     }
 }
-
+/*
 pub struct DirectedAcyclicGraph<NodeType: Eq + Clone, EdgeType: Eq + Clone> {
     data: Vec<DirectedNode<NodeType, EdgeType>>,
     root: Option<usize>,
@@ -362,7 +376,7 @@ impl<T: Debug + Eq + Clone, S: Eq + Clone> ToString for DirectedAcyclicGraph<T, 
         s
     }
 }
-
+*/
 struct ListNode<T> {
     val: T,
     prev: usize,
