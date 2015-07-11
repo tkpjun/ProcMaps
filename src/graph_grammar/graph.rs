@@ -49,14 +49,22 @@ impl<T: Eq + Clone, S: Eq + Clone> DirectedGraph<T, S> {
     }
 
     pub fn remove_node(&mut self, index: usize) {
-        let last = self.nodes() - 1;
+        self.remove_outward_edges(index);
+        self.remove_inward_edges(index);
+        self.repoint_edges_to_last(index);
+        self.reroot_edges_from_last(index);
+        self.data.swap_remove(index);
+    }
 
+    fn remove_outward_edges(&mut self, index: usize) {
         for e in self.data[index].to.iter().map(|edge| edge.to).collect::<Vec<usize>>() {
             self.data[e].from = self.data[e].from.iter()
                 .filter(|&edge| *edge != index)
                 .map(|&edge| edge)
                 .collect();
         }
+    }
+    fn remove_inward_edges(&mut self, index: usize) {
         for i in self.data[index].from.clone() {
             let mut indexes = None;
             for edge in self.data[i].to.iter() {
@@ -69,6 +77,9 @@ impl<T: Eq + Clone, S: Eq + Clone> DirectedGraph<T, S> {
                 _ => {}
             };
         }
+    }
+    fn repoint_edges_to_last(&mut self, index: usize) {
+        let last = self.nodes() - 1;
         'outer: for i in self.data[last].from.clone() {
             let mut iter = self.data[i].to.iter_mut();
             let mut next = iter.next();
@@ -81,19 +92,21 @@ impl<T: Eq + Clone, S: Eq + Clone> DirectedGraph<T, S> {
                 next = iter.next();
             }
         }
-        'o: for e in self.data[last].to.iter().map(|edge| edge.from).collect::<Vec<usize>>() {
+    }
+    fn reroot_edges_from_last(&mut self, index: usize) {
+        let last = self.nodes() - 1;
+        'outer: for e in self.data[last].to.iter().map(|edge| edge.from).collect::<Vec<usize>>() {
             let mut iter = self.data[e].from.iter_mut();
             let mut next = iter.next();
-            'i: while next.is_some() {
+            'inner: while next.is_some() {
                 let from = next.unwrap();
                 if *from == last {
                     *from = index;
-                    break 'i;
+                    break 'inner;
                 }
                 next = iter.next();
             }
         }
-        self.data.swap_remove(index);
     }
 
     //Doesnt make sure the opposite end has the same path
@@ -120,7 +133,6 @@ impl<T: Eq + Clone, S: Eq + Clone> DirectedGraph<T, S> {
     }
 
     pub fn remove_edge(&mut self, from: usize, to: usize) {
-        //println!("{}, {}", from, to);
         let mut i = 0;
         for p in &mut self.data[from].to {
             if p.to == to {
@@ -128,7 +140,6 @@ impl<T: Eq + Clone, S: Eq + Clone> DirectedGraph<T, S> {
             }
             i += 1;
         }
-        //println!("{} from {:?}", i, self.data[from].to.iter().map(|a| a.to).collect::<LinkedList<usize>>());
         let mut end = self.data[from].to.split_off(i);
         end.pop_front();
         self.data[from].to.append(&mut end);
@@ -140,7 +151,6 @@ impl<T: Eq + Clone, S: Eq + Clone> DirectedGraph<T, S> {
             }
             i += 1;
         }
-        //println!("{} from {:?}", i, self.data[to].from);
         let mut end = self.data[to].from.split_off(i);
         end.pop_front();
         self.data[to].from.append(&mut end);
@@ -195,188 +205,7 @@ impl<T: Debug + Eq + Clone, S: Eq + Clone> ToString for DirectedGraph<T, S> {
         s
     }
 }
-/*
-pub struct DirectedAcyclicGraph<NodeType: Eq + Clone, EdgeType: Eq + Clone> {
-    data: Vec<DirectedNode<NodeType, EdgeType>>,
-    root: Option<usize>,
-}
 
-impl<T: Eq + Clone, S: Eq + Clone> DirectedAcyclicGraph<T, S> {
-
-    pub fn new() -> DirectedAcyclicGraph<T, S> {
-        DirectedAcyclicGraph{ data: Vec::new(), root: None }
-    }
-
-    pub fn nodes(&self) -> usize {
-        self.data.len()
-    }
-
-    pub fn get_root(&self) -> &DirectedNode<T, S> {
-        &self.data[self.root]
-    }
-
-    pub fn set_root(&mut self){
-        if self.root.is_none() || self.data[self.root.unwrap()].from.len() > 0 {
-            for index in 0..self.nodes() {
-                if self.data[index].from.len() == 0 {
-                    self.root = Some(index);
-                    return;
-                }
-            }
-            panic!("No root: broken acyclic graph!");
-        }
-    }
-
-    pub fn push_node(&mut self, value: T) {
-        let node = DirectedNode{ value: value, to: LinkedList::new(), from: LinkedList::new() };
-        self.data.push(node);
-    }
-
-    pub fn get_node(&self, index: usize) -> &DirectedNode<T, S> {
-        &self.data[index]
-    }
-
-    pub fn mut_node(&mut self, index: usize) -> &mut DirectedNode<T, S> {
-        &mut self.data[index]
-    }
-
-    pub fn remove_node(&mut self, index: usize) {
-        let last = self.nodes() - 1;
-
-        for i in self.data[index].from.clone() {
-            let mut indexes = None;
-            for edge in self.data[i].to.iter() {
-                if edge.to == index {
-                    indexes = Some((edge.from, edge.to));
-                }
-            }
-            match indexes {
-                Some(tup) => self.remove_path(tup.0, tup.1),
-                _ => {}
-            };
-        }
-        for e in self.data[index].to.iter().map(|edge| edge.from).collect::<Vec<usize>>() {
-            self.data[e].from = self.data[e].from.iter()
-                .filter(|&edge| *edge != index)
-                .map(|&edge| edge)
-                .collect();
-        }
-        'outer: for i in self.data[self.nodes() - 1].from.clone() {
-            let mut iter = self.data[i].to.iter_mut();
-            let mut next = iter.next();
-            'inner: while next.is_some() {
-                let edge = next.unwrap();
-                if edge.to == last {
-                    edge.to = index;
-                    break 'inner;
-                }
-                next = iter.next();
-            }
-        }
-        'o: for e in self.data[self.nodes() - 1].to.iter().map(|edge| edge.from).collect::<Vec<usize>>() {
-            let mut iter = self.data[e].from.iter_mut();
-            let mut next = iter.next();
-            'i: while next.is_some() {
-                let from = next.unwrap();
-                if *from == last {
-                    *from = index;
-                    break 'i;
-                }
-                next = iter.next();
-            }
-        }
-        self.data.swap_remove(index);
-    }
-
-    //Doesnt make sure the opposite end has the same path
-    pub fn set_paths(&mut self, index: usize, edges: Vec<Edge<S>>) {
-        self.data[index].from.clear();
-        self.data[index].to.clear();
-        for edge in edges {
-            let from = edge.from;
-            let to = edge.to;
-            self.data[edge.from].to.push_back(edge);
-            self.data[to].from.push_back(from);
-        }
-    }
-
-    pub fn add_path(&mut self, from: usize, to: usize, value: S) {
-        let edge = Edge{value: value, from: from, to: to};
-        self.data[from].to.push_back(edge);
-        self.data[to].from.push_back(from);
-    }
-
-    pub fn remove_path(&mut self, from: usize, to: usize) {
-        let mut i = 0;
-        for p in &mut self.data[from].to {
-            if p.to == to {
-                break;
-            }
-            i += 1;
-        }
-        let mut end = self.data[from].from.split_off(i);
-        end.pop_front();
-        self.data[from].from.append(&mut end);
-
-        i = 0;
-        for p in &mut self.data[to].from {
-            if *p == from {
-                break;
-            }
-            i += 1;
-        }
-        let mut end = self.data[to].to.split_off(i);
-        end.pop_front();
-        self.data[to].to.append(&mut end);
-    }
-
-    //Returns the shortest path to the target in reverse: target is result[0].
-    pub fn bfs(&self, start: usize, exclude: usize, target: &T) -> Option<Vec<usize>> {
-        let mut search = vec![ListNode{val: start, prev: 0}];
-        let mut marked = vec![exclude];
-        let build_ret = |space: &Vec<ListNode<usize>>| -> Option<Vec<usize>> {
-            let index = space.len() - 1;
-            let mut ret = vec![space[index].val];
-            let mut next = space[index].prev;
-            while next > 0 {
-                ret.push(space[next].val);
-                next = space[next].prev;
-            }
-            return Some(ret);
-        };
-
-        let mut i = 0;
-        while i <= search.len() {
-            for path in &self.data[search[i].val].to {
-                if self.data[path.to].value == *target {
-                    search.push(ListNode{val: path.to, prev: i});
-                    return build_ret(&search);
-                }
-                if marked.iter().all(|a| *a != path.to) {
-                    marked.push(path.to);
-                    search.push(ListNode{val: path.to, prev: i});
-                }
-            }
-            i += 1;
-        }
-        None
-    }
-}
-
-impl<T: Debug + Eq + Clone, S: Eq + Clone> ToString for DirectedAcyclicGraph<T, S> {
-    fn to_string(&self) -> String {
-        let mut s = String::new();
-        for node in &self.data {
-            s = s + &*format!("{:?}", node.value);
-            for path in &node.to {
-                s = s + " -> " + &*path.to.to_string();
-            }
-            s = s + "\n";
-        }
-        s
-    }
-}
-*/
 struct ListNode<T> {
     val: T,
     prev: usize,
