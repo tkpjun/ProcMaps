@@ -1,6 +1,7 @@
 use super::graph::DirectedGraph;
 use super::graph::Edge;
 use std::collections::VecDeque;
+use std::collections::HashMap;
 use rand;
 use rand::Rng;
 use super::labels::Symbol;
@@ -11,6 +12,8 @@ use super::labels::SearchEdge;
 pub struct Rule<T: Symbol, S: Symbol, U: SymbolSet<T>, V: SymbolSet<S>> {
     start: DirectedGraph<U, V>,
     result: DirectedGraph<T, S>,
+    start_to_res: HashMap<usize, usize>,
+    res_to_start: HashMap<usize, usize>,
     root: usize,
     enforce_direction: bool,
 }
@@ -117,10 +120,85 @@ impl<T: Symbol, S: Symbol, U: SymbolSet<T>, V: SymbolSet<S>> Rule<T, S, U, V> {
     }
 
     fn alter_old(&self, graph: &mut DirectedGraph<T, S>, subgraph: &[usize]) {
-
+        for start_index in 0..subgraph.len() {
+            if let Some(result_index) = self.start_to_res.get(&start_index) {
+                {
+                    let new_node = &self.result.get_node(*result_index);
+                    let old_node = graph.mut_node(subgraph[start_index]);
+                    if old_node.label != new_node.label {
+                        old_node.label = new_node.label.clone();
+                    }
+                }
+                for edge in self.start.get_node(start_index).to.iter() {
+                    let edge_target = self.start_to_res.get(&edge.to);
+                    if edge_target.is_none() ||
+                       self.result.get_node(*edge_target.unwrap()).from.iter()
+                           .all(|&from| from != self.start_to_res[&edge.from]) {
+                        graph.remove_edge(subgraph[edge.from], subgraph[edge.to]);
+                    }
+                }
+            }
+            else {
+                graph.remove_node(subgraph[start_index]);
+            }
+        }
     }
 
     fn add_new(&self, graph: &mut DirectedGraph<T, S>, subgraph: &[usize]) {
+        let mut node_indexes = Vec::new();
 
+        for result_index in 0..self.result.nodes() {
+            let res_node = self.result.get_node(result_index);
+            let graph_index =
+                if let Some(start_index) = self.res_to_start.get(&result_index) {
+                    subgraph[*start_index]
+                }
+                else {
+                    graph.push_node(res_node.label.clone());
+                    graph.nodes() - 1
+                };
+            node_indexes.push(graph_index);
+        }
+
+        for index in 0..self.result.nodes() {
+            let res_node = self.result.get_node(index);
+            let start_node = self.res_to_start.get(&index);
+            for edge in res_node.to.iter() {
+                //If edge doesn't exist in start graph
+                //Get the equivalent of edge.to in the target graph
+                //And create edge from graph_index to the eq of edge.to
+                let start_target = self.res_to_start.get(&edge.to);
+                if start_node.is_none() || start_target.is_none() ||
+                   self.start.get_node(*start_node.unwrap()).to.iter()
+                        .all(|e| e.to != *start_target.unwrap()) {
+                    graph.add_edge(node_indexes[index], node_indexes[edge.to], edge.label.clone(), true);
+                }
+                //If it does exist, and has a different label
+                //Change its label to the result graph version
+                else {
+                    let mut graph_node = graph.mut_node(node_indexes[index]);
+                    let graph_edge = graph_node.to.iter_mut().find(|e| e.to == node_indexes[edge.to]).unwrap();
+                    if graph_edge.label != edge.label {
+                        graph_edge.label = edge.label.clone();
+                    }
+                }
+            }
+            for edge_index in res_node.from.iter() {
+                let edge = self.result.get_node(*edge_index).to.iter().find(|e| e.to == index).unwrap();
+                let start_origin = self.res_to_start.get(&edge.from);
+                if start_node.is_none() || start_origin.is_none() ||
+                   self.start.get_node(*start_node.unwrap()).from.iter()
+                        .all(|&i| i != *start_origin.unwrap()) {
+                    graph.add_edge(node_indexes[edge.from], node_indexes[index], edge.label.clone(), true);
+                }
+                else {
+                    let mut graph_origin = graph.mut_node(node_indexes[edge.from]);
+                    let graph_edge = graph_origin.to.iter_mut().find(|e| e.to == node_indexes[edge.to]).unwrap();
+                    if graph_edge.label != edge.label {
+                        graph_edge.label = edge.label.clone();
+                    }
+                }
+            }
+        }
     }
 }
