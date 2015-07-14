@@ -1,10 +1,12 @@
-pub trait Symbol: Eq + Clone {}
+use std::fmt::Debug;
+
+pub trait Symbol: Eq + Clone + Debug {}
 
 pub trait SymbolSet<T: Symbol>: Symbol {
     fn is_superset_of(&self, other: &T) -> bool;
 }
 
-#[derive(Clone, Eq, PartialEq)]
+#[derive(Clone, Eq, PartialEq, Debug)]
 pub enum SearchNode<T: Symbol> {
     Some(Vec<T>),
     Not(Vec<T>),
@@ -22,7 +24,7 @@ impl<T: Symbol> SymbolSet<T> for SearchNode<T> {
     }
 }
 
-#[derive(Clone, Eq, PartialEq)]
+#[derive(Clone, Eq, PartialEq, Debug)]
 pub enum SearchEdge<T: Symbol> {
     Some(Vec<T>),
     Not(Vec<T>),

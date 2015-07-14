@@ -1,8 +1,9 @@
 use graph_grammar::labels::Symbol;
 use graph_grammar::labels::SymbolSet;
+use std::fmt::Debug;
 
-#[derive(Clone, Eq, PartialEq)]
-pub enum NodeLabel<T: Eq + Clone> {
+#[derive(Clone, Eq, PartialEq, Debug)]
+pub enum NodeLabel<T: Eq + Clone + Debug> {
     Null,
     LevelEntry(T),
     LevelExit(T),
@@ -27,20 +28,20 @@ pub enum NodeLabel<T: Eq + Clone> {
     PointOfInterest(T),
     EmptyScenery(T),
 }
-impl<T: Eq + Clone> Symbol for NodeLabel<T> {}
-impl<T: Eq + Clone> SymbolSet<NodeLabel<T>> for NodeLabel<T> {
+impl<T: Eq + Clone + Debug> Symbol for NodeLabel<T> {}
+impl<T: Eq + Clone + Debug> SymbolSet<NodeLabel<T>> for NodeLabel<T> {
     fn is_superset_of(&self, other: &NodeLabel<T>) -> bool {
         *self == *other
     }
 }
 
-#[derive(Clone, Eq, PartialEq)]
-pub enum EdgeLabel<T: Eq + Clone> {
+#[derive(Clone, Eq, PartialEq, Debug)]
+pub enum EdgeLabel<T: Eq + Clone + Debug> {
     TightCoup(NodeLabel<T>),
     LooseCoup(NodeLabel<T>),
 }
-impl<T: Eq + Clone> Symbol for EdgeLabel<T> {}
-impl<T: Eq + Clone> SymbolSet<EdgeLabel<T>> for EdgeLabel<T> {
+impl<T: Eq + Clone + Debug> Symbol for EdgeLabel<T> {}
+impl<T: Eq + Clone + Debug> SymbolSet<EdgeLabel<T>> for EdgeLabel<T> {
     fn is_superset_of(&self, other: &EdgeLabel<T>) -> bool {
         *self == *other
     }

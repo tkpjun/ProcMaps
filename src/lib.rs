@@ -11,4 +11,5 @@ pub mod graph_grammar {
 }
 mod tests {
     mod graph;
+    mod rules;
 }

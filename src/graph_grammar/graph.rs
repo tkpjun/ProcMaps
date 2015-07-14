@@ -95,8 +95,8 @@ impl<T: Eq + Clone, S: Eq + Clone> DirectedGraph<T, S> {
     }
     fn reroot_edges_from_last(&mut self, index: usize) {
         let last = self.nodes() - 1;
-        'outer: for e in self.data[last].to.iter().map(|edge| edge.from).collect::<Vec<usize>>() {
-            let mut iter = self.data[e].from.iter_mut();
+        'outer: for i in self.data[last].to.iter().map(|edge| edge.to).collect::<Vec<usize>>() {        
+            let mut iter = self.data[i].from.iter_mut();
             let mut next = iter.next();
             'inner: while next.is_some() {
                 let from = next.unwrap();
@@ -106,6 +106,9 @@ impl<T: Eq + Clone, S: Eq + Clone> DirectedGraph<T, S> {
                 }
                 next = iter.next();
             }
+        }
+        for edge in self.data[last].to.iter_mut() {
+            edge.from = index;
         }
     }
 
@@ -189,7 +192,7 @@ impl<T: Eq + Clone, S: Eq + Clone> DirectedGraph<T, S> {
     }
 }
 
-impl<T: Debug + Eq + Clone, S: Eq + Clone> ToString for DirectedGraph<T, S> {
+impl<T: Debug + Eq + Clone, S: Debug + Eq + Clone> ToString for DirectedGraph<T, S> {
     fn to_string(&self) -> String {
         let mut s = String::new();
         for node in &self.data {
@@ -198,7 +201,8 @@ impl<T: Debug + Eq + Clone, S: Eq + Clone> ToString for DirectedGraph<T, S> {
             }
             s = s + &*format!("-> {:?} -> ", node.label);
             for path in &node.to {
-                s = s + &*path.to.to_string() + ",";
+                s = s + &format!("{:?}", path.label) + "(" + &*path.from.to_string() + "-"
+                      + &*path.to.to_string() + ")" + ",";
             }
             s = s + "\n";
         }

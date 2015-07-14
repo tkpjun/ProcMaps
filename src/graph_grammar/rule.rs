@@ -2,8 +2,8 @@ use super::graph::DirectedGraph;
 use super::graph::Edge;
 use std::collections::VecDeque;
 use std::collections::HashMap;
-use rand;
-use rand::Rng;
+//use rand;
+//use rand::Rng;
 use super::labels::Symbol;
 use super::labels::SymbolSet;
 use super::labels::SearchNode;
@@ -15,12 +15,20 @@ pub struct Rule<T: Symbol, S: Symbol, U: SymbolSet<T>, V: SymbolSet<S>> {
     start_to_res: HashMap<usize, usize>,
     res_to_start: HashMap<usize, usize>,
     root: usize,
-    enforce_direction: bool,
+    //enforce_direction: bool,
 }
 
 impl<T: Symbol, S: Symbol, U: SymbolSet<T>, V: SymbolSet<S>> Rule<T, S, U, V> {
-    pub fn apply_to(&self, graph: &mut DirectedGraph<T, S>) -> bool {
-        panic!("");
+
+    pub fn new(start: DirectedGraph<U, V>, result: DirectedGraph<T, S>, start_to_res: HashMap<usize, usize>, root: usize) -> Rule<T, S, U, V> {
+        let res_to_start = start_to_res.iter().map(|(&k, &v)| (v, k)).collect();
+        Rule{ start: start, result: result, start_to_res: start_to_res, res_to_start: res_to_start, root: root }
+    }
+
+    pub fn apply_to(&self, graph: &mut DirectedGraph<T, S>, subgraph: &[usize]) {
+        self.alter_old(graph, subgraph);
+        //sending expired subgraph to function!!
+        self.add_new(graph, subgraph);
     }
 
     pub fn find_subgraphs(&self, graph: &DirectedGraph<T, S>) -> Vec<Vec<usize>> {
@@ -178,22 +186,6 @@ impl<T: Symbol, S: Symbol, U: SymbolSet<T>, V: SymbolSet<S>> Rule<T, S, U, V> {
                 else {
                     let mut graph_node = graph.mut_node(node_indexes[index]);
                     let graph_edge = graph_node.to.iter_mut().find(|e| e.to == node_indexes[edge.to]).unwrap();
-                    if graph_edge.label != edge.label {
-                        graph_edge.label = edge.label.clone();
-                    }
-                }
-            }
-            for edge_index in res_node.from.iter() {
-                let edge = self.result.get_node(*edge_index).to.iter().find(|e| e.to == index).unwrap();
-                let start_origin = self.res_to_start.get(&edge.from);
-                if start_node.is_none() || start_origin.is_none() ||
-                   self.start.get_node(*start_node.unwrap()).from.iter()
-                        .all(|&i| i != *start_origin.unwrap()) {
-                    graph.add_edge(node_indexes[edge.from], node_indexes[index], edge.label.clone(), true);
-                }
-                else {
-                    let mut graph_origin = graph.mut_node(node_indexes[edge.from]);
-                    let graph_edge = graph_origin.to.iter_mut().find(|e| e.to == node_indexes[edge.to]).unwrap();
                     if graph_edge.label != edge.label {
                         graph_edge.label = edge.label.clone();
                     }
