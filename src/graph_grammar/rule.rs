@@ -6,8 +6,6 @@ use std::collections::HashMap;
 //use rand::Rng;
 use super::labels::Symbol;
 use super::labels::SymbolSet;
-use super::labels::SearchNode;
-use super::labels::SearchEdge;
 
 pub struct Rule<T: Symbol, S: Symbol, U: SymbolSet<T>, V: SymbolSet<S>> {
     start: DirectedGraph<U, V>,
@@ -27,7 +25,6 @@ impl<T: Symbol, S: Symbol, U: SymbolSet<T>, V: SymbolSet<S>> Rule<T, S, U, V> {
 
     pub fn apply_to(&self, graph: &mut DirectedGraph<T, S>, subgraph: &[usize]) {
         let updated_subgraph = self.alter_old(graph, subgraph);
-        //sending expired subgraph to function!! get updated subgraph
         self.add_new(graph, &updated_subgraph);
     }
 
@@ -158,7 +155,7 @@ impl<T: Symbol, S: Symbol, U: SymbolSet<T>, V: SymbolSet<S>> Rule<T, S, U, V> {
     }
 
     fn add_new(&self, graph: &mut DirectedGraph<T, S>, subgraph: &[usize]) {
-        let mut node_indexes = self.build_result_subgraph(graph, subgraph);
+        let node_indexes = self.build_result_subgraph(graph, subgraph);
 
         for index in 0..self.result.nodes() {
             let res_node = self.result.get_node(index);

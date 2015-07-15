@@ -1,15 +1,10 @@
 use graph_grammar::graph::DirectedGraph;
 use graph_grammar::rule::Rule;
-use graph_grammar::labels::Symbol;
-use graph_grammar::labels::SymbolSet;
 use graph_grammar::labels::SearchNode;
 use graph_grammar::labels::SearchEdge;
 use std::collections::HashMap;
-
-#[allow(dead_code)]
-#[derive(Eq, PartialEq, Clone, Debug)]
-enum Dummy {A, B, C}
-impl Symbol for Dummy {}
+use tests::graph::DummyLabel;
+use tests::graph::DummyLabel::{A, B, C};
 
 #[test]
 fn find_subgraphs() {
@@ -33,28 +28,28 @@ fn apply_rule() {
 }
 
 #[allow(dead_code)]
-fn build_graph() -> DirectedGraph<Dummy, Dummy> {
+fn build_graph() -> DirectedGraph<DummyLabel, DummyLabel> {
     let mut g = DirectedGraph::new();
-    g.push_node(Dummy::A);
-    g.push_node(Dummy::B);
-    g.push_node(Dummy::A);
-    g.add_edge(0, 1, Dummy::A, true);
-    g.add_edge(2, 0, Dummy::A, true);
-    g.add_edge(2, 1, Dummy::A, true);
+    g.push_node(A);
+    g.push_node(B);
+    g.push_node(A);
+    g.add_edge(0, 1, A, true);
+    g.add_edge(2, 0, A, true);
+    g.add_edge(2, 1, A, true);
     return g;
 }
 
 #[allow(dead_code)]
-fn build_rule() -> Rule<Dummy, Dummy, SearchNode<Dummy>, SearchEdge<Dummy>> {
+fn build_rule() -> Rule<DummyLabel, DummyLabel, SearchNode<DummyLabel>, SearchEdge<DummyLabel>> {
     let mut s = DirectedGraph::new();
-    s.push_node(SearchNode::Some(vec!(Dummy::A)));
-    s.push_node(SearchNode::Some(vec!(Dummy::B)));
+    s.push_node(SearchNode::Some(vec!(A)));
+    s.push_node(SearchNode::Some(vec!(B)));
     s.add_edge(0, 1, SearchEdge::Any, true);
 
     let mut r = DirectedGraph::new();
-    r.push_node(Dummy::A);
-    r.push_node(Dummy::C);
-    r.add_edge(0, 1, Dummy::B, false);
+    r.push_node(A);
+    r.push_node(C);
+    r.add_edge(0, 1, B, false);
 
     let mut h = HashMap::new();
     h.insert(0, 0);

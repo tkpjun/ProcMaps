@@ -1,8 +1,11 @@
 use graph_grammar::graph::DirectedGraph;
+use graph_grammar::labels::Symbol;
+use self::DummyLabel::{A, B, C};
 
 #[allow(dead_code)]
 #[derive(Eq, PartialEq, Clone, Debug)]
-enum Dummy {A, B, C}
+pub enum DummyLabel {A, B, C}
+impl Symbol for DummyLabel {}
 
 #[test]
 fn build_graph() {
@@ -22,13 +25,13 @@ fn remove_node() {
 }
 
 #[allow(dead_code)]
-fn build() -> DirectedGraph<Dummy, Dummy> {
+fn build() -> DirectedGraph<DummyLabel, DummyLabel> {
     let mut g = DirectedGraph::new();
-    g.push_node(Dummy::A);
-    g.push_node(Dummy::B);
-    g.push_node(Dummy::C);
-    g.add_edge(0, 1, Dummy::A, false);
-    g.add_edge(1, 2, Dummy::A, true);
-    g.add_edge(2, 0, Dummy::A, true);
+    g.push_node(A);
+    g.push_node(B);
+    g.push_node(C);
+    g.add_edge(0, 1, A, false);
+    g.add_edge(1, 2, A, true);
+    g.add_edge(2, 0, A, true);
     return g;
 }
