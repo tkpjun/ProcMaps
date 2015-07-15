@@ -26,9 +26,9 @@ impl<T: Symbol, S: Symbol, U: SymbolSet<T>, V: SymbolSet<S>> Rule<T, S, U, V> {
     }
 
     pub fn apply_to(&self, graph: &mut DirectedGraph<T, S>, subgraph: &[usize]) {
-        self.alter_old(graph, subgraph);
-        //sending expired subgraph to function!!
-        self.add_new(graph, subgraph);
+        let updated_subgraph = self.alter_old(graph, subgraph);
+        //sending expired subgraph to function!! get updated subgraph
+        self.add_new(graph, &updated_subgraph);
     }
 
     pub fn find_subgraphs(&self, graph: &DirectedGraph<T, S>) -> Vec<Vec<usize>> {
@@ -127,7 +127,8 @@ impl<T: Symbol, S: Symbol, U: SymbolSet<T>, V: SymbolSet<S>> Rule<T, S, U, V> {
         return ret;
     }
 
-    fn alter_old(&self, graph: &mut DirectedGraph<T, S>, subgraph: &[usize]) {
+    fn alter_old(&self, graph: &mut DirectedGraph<T, S>, subgraph: &[usize]) -> Vec<usize> {
+        let mut new_sub = subgraph.iter().map(|&i| i).collect::<Vec<usize>>();
         for start_index in 0..subgraph.len() {
             if let Some(result_index) = self.start_to_res.get(&start_index) {
                 {
@@ -148,13 +149,40 @@ impl<T: Symbol, S: Symbol, U: SymbolSet<T>, V: SymbolSet<S>> Rule<T, S, U, V> {
             }
             else {
                 graph.remove_node(subgraph[start_index]);
+                if let Some(last_node_in_subgraph) = new_sub.iter_mut().find(|i| **i == graph.nodes()) {
+                    *last_node_in_subgraph = subgraph[start_index];
+                }
+            }
+        }
+        new_sub
+    }
+
+    fn add_new(&self, graph: &mut DirectedGraph<T, S>, subgraph: &[usize]) {
+        let mut node_indexes = self.build_result_subgraph(graph, subgraph);
+
+        for index in 0..self.result.nodes() {
+            let res_node = self.result.get_node(index);
+            let start_node = self.res_to_start.get(&index);
+            for edge in res_node.to.iter() {
+                let start_target = self.res_to_start.get(&edge.to);
+                if start_node.is_none() || start_target.is_none() ||
+                   self.start.get_node(*start_node.unwrap()).to.iter()
+                        .all(|e| e.to != *start_target.unwrap()) {
+                    graph.add_edge(node_indexes[index], node_indexes[edge.to], edge.label.clone(), true);
+                }
+                else {
+                    let mut graph_node = graph.mut_node(node_indexes[index]);
+                    let graph_edge = graph_node.to.iter_mut().find(|e| e.to == node_indexes[edge.to]).unwrap();
+                    if graph_edge.label != edge.label {
+                        graph_edge.label = edge.label.clone();
+                    }
+                }
             }
         }
     }
 
-    fn add_new(&self, graph: &mut DirectedGraph<T, S>, subgraph: &[usize]) {
+    fn build_result_subgraph(&self, graph: &mut DirectedGraph<T, S>, subgraph: &[usize]) -> Vec<usize>{
         let mut node_indexes = Vec::new();
-
         for result_index in 0..self.result.nodes() {
             let res_node = self.result.get_node(result_index);
             let graph_index =
@@ -167,30 +195,6 @@ impl<T: Symbol, S: Symbol, U: SymbolSet<T>, V: SymbolSet<S>> Rule<T, S, U, V> {
                 };
             node_indexes.push(graph_index);
         }
-
-        for index in 0..self.result.nodes() {
-            let res_node = self.result.get_node(index);
-            let start_node = self.res_to_start.get(&index);
-            for edge in res_node.to.iter() {
-                //If edge doesn't exist in start graph
-                //Get the equivalent of edge.to in the target graph
-                //And create edge from graph_index to the eq of edge.to
-                let start_target = self.res_to_start.get(&edge.to);
-                if start_node.is_none() || start_target.is_none() ||
-                   self.start.get_node(*start_node.unwrap()).to.iter()
-                        .all(|e| e.to != *start_target.unwrap()) {
-                    graph.add_edge(node_indexes[index], node_indexes[edge.to], edge.label.clone(), true);
-                }
-                //If it does exist, and has a different label
-                //Change its label to the result graph version
-                else {
-                    let mut graph_node = graph.mut_node(node_indexes[index]);
-                    let graph_edge = graph_node.to.iter_mut().find(|e| e.to == node_indexes[edge.to]).unwrap();
-                    if graph_edge.label != edge.label {
-                        graph_edge.label = edge.label.clone();
-                    }
-                }
-            }
-        }
+        return node_indexes;
     }
 }
