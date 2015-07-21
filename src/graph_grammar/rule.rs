@@ -7,28 +7,28 @@ use std::collections::HashMap;
 use super::labels::Symbol;
 use super::labels::SymbolSet;
 
-pub struct Rule<T: Symbol, S: Symbol, U: SymbolSet<T>, V: SymbolSet<S>> {
+pub struct Rule<S: Symbol, T: Symbol, U: SymbolSet<S>, V: SymbolSet<T>> {
     start: DirectedGraph<U, V>,
-    result: DirectedGraph<T, S>,
+    result: DirectedGraph<S, T>,
     start_to_res: HashMap<usize, usize>,
     res_to_start: HashMap<usize, usize>,
     root: usize,
     //enforce_direction: bool,
 }
 
-impl<T: Symbol, S: Symbol, U: SymbolSet<T>, V: SymbolSet<S>> Rule<T, S, U, V> {
+impl<S: Symbol, T: Symbol, U: SymbolSet<S>, V: SymbolSet<T>> Rule<S, T, U, V> {
 
-    pub fn new(start: DirectedGraph<U, V>, result: DirectedGraph<T, S>, start_to_res: HashMap<usize, usize>, root: usize) -> Rule<T, S, U, V> {
+    pub fn new(start: DirectedGraph<U, V>, result: DirectedGraph<S, T>, start_to_res: HashMap<usize, usize>, root: usize) -> Rule<S, T, U, V> {
         let res_to_start = start_to_res.iter().map(|(&k, &v)| (v, k)).collect();
         Rule{ start: start, result: result, start_to_res: start_to_res, res_to_start: res_to_start, root: root }
     }
 
-    pub fn apply_to(&self, graph: &mut DirectedGraph<T, S>, subgraph: &[usize]) {
+    pub fn apply_to(&self, graph: &mut DirectedGraph<S, T>, subgraph: &[usize]) {
         let updated_subgraph = self.alter_old(graph, subgraph);
         self.add_new(graph, &updated_subgraph);
     }
 
-    pub fn find_subgraphs(&self, graph: &DirectedGraph<T, S>) -> Vec<Vec<usize>> {
+    pub fn find_subgraphs(&self, graph: &DirectedGraph<S, T>) -> Vec<Vec<usize>> {
         let empty = self.start.nodes();
         let mut ret = Vec::new();
         for i in 0..graph.nodes() {
@@ -71,7 +71,7 @@ impl<T: Symbol, S: Symbol, U: SymbolSet<T>, V: SymbolSet<S>> Rule<T, S, U, V> {
         return ret;
     }
 
-    fn initial_node<'a>(&self, index: usize, graph: &'a DirectedGraph<T, S>) -> Option<Vec<usize>> {
+    fn initial_node<'a>(&self, index: usize, graph: &'a DirectedGraph<S, T>) -> Option<Vec<usize>> {
         let empty = self.start.nodes();
         let mut try = Vec::new();
         if self.start.get_node(self.root).label.is_superset_of(&graph.get_node(index).label) {
@@ -83,7 +83,7 @@ impl<T: Symbol, S: Symbol, U: SymbolSet<T>, V: SymbolSet<S>> Rule<T, S, U, V> {
         if try.len() > 0 { Some(try) } else { None }
     }
 
-    fn update_subgraph(&self, rule_edge: &Edge<V>, subgraph: &mut Vec<usize>, graph: &DirectedGraph<T, S>) -> Vec<Vec<usize>> {
+    fn update_subgraph(&self, rule_edge: &Edge<V>, subgraph: &mut Vec<usize>, graph: &DirectedGraph<S, T>) -> Vec<Vec<usize>> {
         let empty = self.start.nodes();
         let mut new_subgraphs = Vec::new();
         let matching_edges = self.edge_matches(rule_edge, subgraph[rule_edge.from], graph);
@@ -113,7 +113,7 @@ impl<T: Symbol, S: Symbol, U: SymbolSet<T>, V: SymbolSet<S>> Rule<T, S, U, V> {
     fn edge_matches<'a>(&self,
                         rule_edge: &Edge<V>,
                         graph_start: usize,
-                        graph: &'a DirectedGraph<T, S>) -> Vec<&'a Edge<S>> {
+                        graph: &'a DirectedGraph<S, T>) -> Vec<&'a Edge<T>> {
         let mut ret = Vec::new();
         for edge in graph.get_node(graph_start).to.iter() {
             if rule_edge.label.is_superset_of(&edge.label)
@@ -124,7 +124,7 @@ impl<T: Symbol, S: Symbol, U: SymbolSet<T>, V: SymbolSet<S>> Rule<T, S, U, V> {
         return ret;
     }
 
-    fn alter_old(&self, graph: &mut DirectedGraph<T, S>, subgraph: &[usize]) -> Vec<usize> {
+    fn alter_old(&self, graph: &mut DirectedGraph<S, T>, subgraph: &[usize]) -> Vec<usize> {
         let mut new_sub = subgraph.iter().map(|&i| i).collect::<Vec<usize>>();
         for start_index in 0..subgraph.len() {
             if let Some(result_index) = self.start_to_res.get(&start_index) {
@@ -154,7 +154,7 @@ impl<T: Symbol, S: Symbol, U: SymbolSet<T>, V: SymbolSet<S>> Rule<T, S, U, V> {
         new_sub
     }
 
-    fn add_new(&self, graph: &mut DirectedGraph<T, S>, subgraph: &[usize]) {
+    fn add_new(&self, graph: &mut DirectedGraph<S, T>, subgraph: &[usize]) {
         let node_indexes = self.build_result_subgraph(graph, subgraph);
 
         for index in 0..self.result.nodes() {
@@ -178,7 +178,7 @@ impl<T: Symbol, S: Symbol, U: SymbolSet<T>, V: SymbolSet<S>> Rule<T, S, U, V> {
         }
     }
 
-    fn build_result_subgraph(&self, graph: &mut DirectedGraph<T, S>, subgraph: &[usize]) -> Vec<usize>{
+    fn build_result_subgraph(&self, graph: &mut DirectedGraph<S, T>, subgraph: &[usize]) -> Vec<usize>{
         let mut node_indexes = Vec::new();
         for result_index in 0..self.result.nodes() {
             let res_node = self.result.get_node(result_index);

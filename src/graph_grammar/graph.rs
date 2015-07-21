@@ -31,6 +31,17 @@ impl<T: Eq + Clone, S: Eq + Clone> DirectedGraph<T, S> {
         DirectedGraph{ data: Vec::new() }
     }
 
+    pub fn from_vec(nodes: &[T], edges: &[(S, usize, usize)]) -> DirectedGraph<T, S> {
+        let mut g = DirectedGraph{ data: Vec::new() };
+        for node in nodes {
+            g.push_node(node.clone());
+        }
+        for edge in edges {
+            g.add_edge(edge.1, edge.2, edge.0.clone(), true);
+        }
+        return g;
+    }
+
     pub fn nodes(&self) -> usize {
         self.data.len()
     }
@@ -80,31 +91,25 @@ impl<T: Eq + Clone, S: Eq + Clone> DirectedGraph<T, S> {
     }
     fn repoint_edges_to_last(&mut self, index: usize) {
         let last = self.nodes() - 1;
-        'outer: for i in self.data[last].from.clone() {
+        for i in self.data[last].from.clone() {
             let mut iter = self.data[i].to.iter_mut();
-            let mut next = iter.next();
-            'inner: while next.is_some() {
-                let edge = next.unwrap();
+            'inner: while let Some(edge) = iter.next() {
                 if edge.to == last {
                     edge.to = index;
                     break 'inner;
                 }
-                next = iter.next();
             }
         }
     }
     fn reroot_edges_from_last(&mut self, index: usize) {
         let last = self.nodes() - 1;
-        'outer: for i in self.data[last].to.iter().map(|edge| edge.to).collect::<Vec<usize>>() {
+        for i in self.data[last].to.iter().map(|edge| edge.to).collect::<Vec<usize>>() {
             let mut iter = self.data[i].from.iter_mut();
-            let mut next = iter.next();
-            'inner: while next.is_some() {
-                let from = next.unwrap();
+            'inner: while let Some(from) = iter.next() {
                 if *from == last {
                     *from = index;
                     break 'inner;
                 }
-                next = iter.next();
             }
         }
         for edge in self.data[last].to.iter_mut() {

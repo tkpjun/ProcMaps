@@ -4,7 +4,7 @@ use std::fmt::Debug;
 
 #[derive(Clone, Eq, PartialEq, Debug)]
 pub enum NodeLabel<T: Eq + Clone + Debug> {
-    Null,
+    Init,
     LevelEntry(T),
     LevelExit(T),
     AreaEntry(T),
@@ -25,8 +25,8 @@ pub enum NodeLabel<T: Eq + Clone + Debug> {
     SecretDoor(T),
     Item(T),
     SpecialItem(T),
-    PointOfInterest(T),
-    EmptyScenery(T),
+    Reward(T),
+    Scenery(T),
 }
 impl<T: Eq + Clone + Debug> Symbol for NodeLabel<T> {}
 impl<T: Eq + Clone + Debug> SymbolSet<NodeLabel<T>> for NodeLabel<T> {
@@ -37,8 +37,8 @@ impl<T: Eq + Clone + Debug> SymbolSet<NodeLabel<T>> for NodeLabel<T> {
 
 #[derive(Clone, Eq, PartialEq, Debug)]
 pub enum EdgeLabel<T: Eq + Clone + Debug> {
-    TightCoup(NodeLabel<T>),
-    LooseCoup(NodeLabel<T>),
+    Tight(NodeLabel<T>),
+    Loose(NodeLabel<T>),
 }
 impl<T: Eq + Clone + Debug> Symbol for EdgeLabel<T> {}
 impl<T: Eq + Clone + Debug> SymbolSet<EdgeLabel<T>> for EdgeLabel<T> {

@@ -8,6 +8,7 @@ pub mod graph_grammar {
     pub mod rule;
     pub mod labels;
 }
+#[cfg(test)]
 mod tests {
     mod graph;
     mod rules;

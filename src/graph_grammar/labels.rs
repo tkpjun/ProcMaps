@@ -7,23 +7,24 @@ pub trait SymbolSet<T: Symbol>: Symbol {
 }
 
 #[derive(Clone, Eq, PartialEq, Debug)]
-pub enum SearchNode<T: Symbol> {
+pub enum SearchLabel<T: Symbol> {
     Some(Vec<T>),
     Not(Vec<T>),
+    Is(T),
     Any,
 }
-impl<T: Symbol> Symbol for SearchNode<T> {}
-impl<T: Symbol> SymbolSet<T> for SearchNode<T> {
+impl<T: Symbol> Symbol for SearchLabel<T> {}
+impl<T: Symbol> SymbolSet<T> for SearchLabel<T> {
     fn is_superset_of(&self, other: &T) -> bool {
         match self {
-            &SearchNode::Any => true,
-            &SearchNode::Some(ref a) => a.iter().any(|label| other == label),
-            //technically wrong, not(a) is the superset
-            &SearchNode::Not(ref a) => a.iter().all(|label| other != label)
+            &SearchLabel::Any => true,
+            &SearchLabel::Is(ref label) => label == other,
+            &SearchLabel::Some(ref vec) => vec.iter().any(|label| other == label),
+            &SearchLabel::Not(ref vec) => vec.iter().all(|label| other != label)
         }
     }
 }
-
+/*
 #[derive(Clone, Eq, PartialEq, Debug)]
 pub enum SearchEdge<T: Symbol> {
     Some(Vec<T>),
@@ -39,4 +40,4 @@ impl<T: Symbol> SymbolSet<T> for SearchEdge<T> {
             &SearchEdge::Not(ref a) => a.iter().all(|label| other != label)
         }
     }
-}
+}*/
