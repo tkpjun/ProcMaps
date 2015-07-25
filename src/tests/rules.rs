@@ -1,10 +1,8 @@
 use graph_grammar::graph::DirectedGraph;
 use graph_grammar::rule::Rule;
-use graph_grammar::labels::SearchLabel;
-use graph_grammar::labels::SearchLabel::{Any, Some, Is};
+use graph_grammar::labels::SearchLabel::{self, Any, Some, Is};
 use std::collections::HashMap;
-use tests::graph::DummyLabel;
-use tests::graph::DummyLabel::{A, B, C};
+use tests::DummyLabel::{self, A, B, C};
 
 #[test]
 fn find_subgraphs() {
@@ -42,5 +40,5 @@ fn build_rule() -> Rule<DummyLabel, DummyLabel, SearchLabel<DummyLabel>, SearchL
     let r = DirectedGraph::from_vec(&[A, C], &[(B, 0, 1), (B, 1, 0)]);
     let mut h = HashMap::new();
     h.insert(0, 0);
-    Rule::new(s, r, h, 0)
+    Rule::new(s, r, h)
 }

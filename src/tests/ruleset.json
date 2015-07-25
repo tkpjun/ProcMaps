@@ -1,0 +1,19 @@
+{
+  "labelSet": "missionGrammar",
+  "searchLabels": true,
+  "rules": [
+    {
+      "start": {
+        "nodes": { "Is": { "Init": 0 } },
+        "edges": []
+      },
+      "result": {
+        "nodes": [ {"LevelEntry": 0}, {"LevelExit": 0} ],
+        "edges": [ {"Loose": [0, 1]} ]
+      },
+      "sameNodes": [
+        [0, 0]
+      ]
+    }
+  ]
+}

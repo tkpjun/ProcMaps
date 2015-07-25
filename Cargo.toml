@@ -6,3 +6,4 @@ authors = ["Tim Junell <tkpjun@outlook.com>"]
 
 [dependencies]
 rand = "0.3.8"
+serde = "0.4.3"

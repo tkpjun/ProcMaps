@@ -2,8 +2,6 @@ use super::graph::DirectedGraph;
 use super::graph::Edge;
 use std::collections::VecDeque;
 use std::collections::HashMap;
-//use rand;
-//use rand::Rng;
 use super::labels::Symbol;
 use super::labels::SymbolSet;
 
@@ -12,15 +10,14 @@ pub struct Rule<S: Symbol, T: Symbol, U: SymbolSet<S>, V: SymbolSet<T>> {
     result: DirectedGraph<S, T>,
     start_to_res: HashMap<usize, usize>,
     res_to_start: HashMap<usize, usize>,
-    root: usize,
     //enforce_direction: bool,
 }
 
 impl<S: Symbol, T: Symbol, U: SymbolSet<S>, V: SymbolSet<T>> Rule<S, T, U, V> {
 
-    pub fn new(start: DirectedGraph<U, V>, result: DirectedGraph<S, T>, start_to_res: HashMap<usize, usize>, root: usize) -> Rule<S, T, U, V> {
+    pub fn new(start: DirectedGraph<U, V>, result: DirectedGraph<S, T>, start_to_res: HashMap<usize, usize>) -> Rule<S, T, U, V> {
         let res_to_start = start_to_res.iter().map(|(&k, &v)| (v, k)).collect();
-        Rule{ start: start, result: result, start_to_res: start_to_res, res_to_start: res_to_start, root: root }
+        Rule{ start: start, result: result, start_to_res: start_to_res, res_to_start: res_to_start }
     }
 
     pub fn apply_to(&self, graph: &mut DirectedGraph<S, T>, subgraph: &[usize]) {
@@ -38,7 +35,7 @@ impl<S: Symbol, T: Symbol, U: SymbolSet<S>, V: SymbolSet<T>> Rule<S, T, U, V> {
         }
         let mut edges_left = VecDeque::with_capacity(10);
         let mut edges_explored = Vec::new();
-        for edge in self.start.get_node(self.root).to.iter() {
+        for edge in self.start.get_node(0).to.iter() {
             edges_left.push_back(edge);
         }
 
@@ -64,6 +61,11 @@ impl<S: Symbol, T: Symbol, U: SymbolSet<S>, V: SymbolSet<T>> Rule<S, T, U, V> {
                     if edges_explored.iter().all(|e| !new_edge.matches(*e)) {
                         edges_left.push_back(new_edge);
                     }
+                    else {
+                        //start graph has a cycle in it: make sure that it's cyclical
+                        //in the parameter graph as well
+                        panic!("Searching for cyclical subgraphs is not supported!");
+                    }
                 }
             }
             edges_explored.push((edge.from, edge.to));
@@ -74,11 +76,11 @@ impl<S: Symbol, T: Symbol, U: SymbolSet<S>, V: SymbolSet<T>> Rule<S, T, U, V> {
     fn initial_node<'a>(&self, index: usize, graph: &'a DirectedGraph<S, T>) -> Option<Vec<usize>> {
         let empty = self.start.nodes();
         let mut try = Vec::new();
-        if self.start.get_node(self.root).label.is_superset_of(&graph.get_node(index).label) {
+        if self.start.get_node(0).label.is_superset_of(&graph.get_node(index).label) {
             for _ in 0..self.start.nodes() {
                 try.push(empty);
             }
-            try[self.root] = index;
+            try[0] = index;
         }
         if try.len() > 0 { Some(try) } else { None }
     }

@@ -1,11 +1,6 @@
 use graph_grammar::graph::DirectedGraph;
 use graph_grammar::labels::Symbol;
-use self::DummyLabel::{A, B, C};
-
-#[allow(dead_code)]
-#[derive(Eq, PartialEq, Clone, Debug)]
-pub enum DummyLabel {A, B, C}
-impl Symbol for DummyLabel {}
+use super::DummyLabel::{A, B, C};
 
 #[test]
 fn build_graph() {

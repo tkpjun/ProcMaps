@@ -1,7 +1,12 @@
 extern crate rand;
+extern crate serde;
 
-pub mod mission_graph {
+pub mod mission_grammar {
     pub mod labels;
+}
+pub mod deserialization {
+    pub mod runtime_labels;
+    pub mod json;
 }
 pub mod graph_grammar {
     pub mod graph;
@@ -9,7 +14,4 @@ pub mod graph_grammar {
     pub mod labels;
 }
 #[cfg(test)]
-mod tests {
-    mod graph;
-    mod rules;
-}
+mod tests;
