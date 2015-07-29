@@ -6,6 +6,7 @@ pub mod mission_grammar {
 }
 pub mod deserialization {
     pub mod runtime_labels;
+    mod mappings;
     pub mod json;
 }
 pub mod graph_grammar {
