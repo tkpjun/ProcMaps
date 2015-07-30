@@ -38,7 +38,7 @@ fn none_checked<T>(option: Option<Vec<Option<T>>>) -> Result<Vec<T>, jsonError> 
 fn read_file(path: &str) -> Result<String, jsonError> {
     let path = Path::new(path);
     let mut content = String::new();
-    let mut file = try!(File::open(&path).and_then(|mut f| f.read_to_string(&mut content)));
+    try!(File::open(&path).and_then(|mut f| f.read_to_string(&mut content)));
     return Ok(content);
 }
 
@@ -97,10 +97,15 @@ where S: Symbol, T: Symbol, U: SymbolSet<S>, V: SymbolSet<T> {
             let mut ret = Vec::new();
             for n in ns {
                 if let Some(arr) = n.as_array() {
-                    if (is_simple) {
-                        match (arr[0].as_string(), arr[1].as_i64()) {
+                    ret.reserve_exact(arr.len());
+                    if is_simple {
+                        match (arr.get(0).and_then(Value::as_string),
+                               arr.get(1).and_then(Value::as_i64)) {
                             (Some(s), Some(i)) => {
-                                ret.push(parse_node::<U>(s, i as i32, label_set));
+                                if let Some(node) = parse_node::<U>(s, i as i32, label_set) {
+                                    ret.push(node);
+                                }
+                                else { return None; }
                             },
                             _ => { return None; }
                         }
@@ -120,12 +125,18 @@ where S: Symbol, T: Symbol, U: SymbolSet<S>, V: SymbolSet<T> {
             let mut ret = Vec::new();
             for e in es {
                 if let Some(arr) = e.as_array() {
-                    if (is_simple) {
-                        match (arr[0].as_string(), arr[1].as_u64(), arr[2].as_u64()) {
+                    ret.reserve_exact(arr.len());
+                    if is_simple {
+                        match (arr.get(0).and_then(Value::as_string),
+                               arr.get(1).and_then(Value::as_u64),
+                               arr.get(2).and_then(Value::as_u64)) {
                             (Some(s), Some(begin), Some(end)) => {
                                 let b = begin as usize;
                                 let e = end as usize;
-                                ret.push((parse_edge::<V>(s, b, e, label_set), b, e));
+                                if let Some(edge) = parse_edge::<V>(s, b, e, label_set) {
+                                    ret.push((edge, b, e));
+                                }
+                                else { return None; }
                             },
                             _ => { return None; }
                         }
@@ -150,9 +161,14 @@ where S: Symbol, T: Symbol {
             let mut ret = Vec::new();
             for n in ns {
                 if let Some(arr) = n.as_array() {
-                    match (arr[0].as_string(), arr[1].as_i64()) {
+                    ret.reserve_exact(arr.len());
+                    match (arr.get(0).and_then(Value::as_string),
+                           arr.get(1).and_then(Value::as_i64)) {
                         (Some(s), Some(i)) => {
-                            ret.push(parse_node::<S>(s, i as i32, label_set));
+                             if let Some(node) = parse_node::<S>(s, i as i32, label_set) {
+                                 ret.push(node);
+                             }
+                             else { return None; }
                         },
                         _ => { return None; }
                     }
@@ -168,11 +184,17 @@ where S: Symbol, T: Symbol {
             let mut ret = Vec::new();
             for e in es {
                 if let Some(arr) = e.as_array() {
-                    match (arr[0].as_string(), arr[1].as_u64(), arr[2].as_u64()) {
+                    ret.reserve_exact(arr.len());
+                    match (arr.get(0).and_then(Value::as_string),
+                           arr.get(1).and_then(Value::as_u64),
+                           arr.get(2).and_then(Value::as_u64)) {
                         (Some(s), Some(begin), Some(end)) => {
                             let b = begin as usize;
                             let e = end as usize;
-                            ret.push((parse_edge::<T>(s, b, e, label_set), b, e));
+                            if let Some(edge) = parse_edge::<T>(s, b, e, label_set) {
+                                ret.push((edge, b, e));
+                            }
+                            else { return None; }
                         },
                         _ => { return None; }
                     }
@@ -190,23 +212,20 @@ fn parse_same_nodes(vec: &Vec<Value>) -> Option<HashMap<usize, usize>> {
     let mut ret = HashMap::new();
     for arr in vec.into_iter() {
         if let Some(v) = arr.as_array() {
-            if let Some(i0) = vec[0].as_u64() {
-                if let Some(i1) = vec[1].as_u64() {
-                    ret.insert(i0 as usize, i1 as usize);
-                }
-                else { return None; }
+            match (v[0].as_u64(), v[1].as_u64() ) {
+                (Some(i0), Some(i1)) => {ret.insert(i0 as usize, i1 as usize);},
+                _ => { return None; }
             }
-            else { return None; }
         }
         else { return None; }
     }
     Some(ret)
 }
 
-fn parse_node<T>(name: &str, value: i32, label_set: &LabelSet) -> T {
+fn parse_node<T>(name: &str, value: i32, label_set: &LabelSet) -> Option<T> {
     unimplemented!();
 }
 
-fn parse_edge<T>(name: &str, from: usize, to: usize, label_set: &LabelSet) -> T {
+fn parse_edge<T>(name: &str, from: usize, to: usize, label_set: &LabelSet) -> Option<T> {
     unimplemented!();
 }
