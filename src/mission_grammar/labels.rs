@@ -1,6 +1,6 @@
 use graph_grammar::labels::Symbol;
 use graph_grammar::labels::SymbolSet;
-use std::fmt::Debug;
+//use std::fmt::Debug;
 
 #[derive(Clone, Eq, PartialEq, Debug)]
 pub enum NodeLabel {

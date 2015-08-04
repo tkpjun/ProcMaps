@@ -9,7 +9,7 @@
       },
       "result": {
         "nodes": [ ["LevelEntry", 0], ["LevelExit", 0] ],
-        "edges": [ ["Loose", 0, 1] ]
+        "edges": [ [0, 1, "Loose"] ]
       },
       "sameNodes": [
         [0, 0]

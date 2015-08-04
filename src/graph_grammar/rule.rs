@@ -131,10 +131,10 @@ impl<S: Symbol, T: Symbol, U: SymbolSet<S>, V: SymbolSet<T>> Rule<S, T, U, V> {
         for start_index in 0..subgraph.len() {
             if let Some(result_index) = self.start_to_res.get(&start_index) {
                 {
-                    let new_node = &self.result.get_node(*result_index);
-                    let old_node = graph.mut_node(subgraph[start_index]);
-                    if old_node.label != new_node.label {
-                        old_node.label = new_node.label.clone();
+                    let new_node = &self.result.get_node(*result_index).label;
+                    let old_node = graph.mut_label(subgraph[start_index]);
+                    if *old_node != *new_node {
+                        *old_node = new_node.clone();
                     }
                 }
                 for edge in self.start.get_node(start_index).to.iter() {
@@ -170,10 +170,9 @@ impl<S: Symbol, T: Symbol, U: SymbolSet<S>, V: SymbolSet<T>> Rule<S, T, U, V> {
                     graph.add_edge(node_indexes[index], node_indexes[edge.to], edge.label.clone(), true);
                 }
                 else {
-                    let mut graph_node = graph.mut_node(node_indexes[index]);
-                    let graph_edge = graph_node.to.iter_mut().find(|e| e.to == node_indexes[edge.to]).unwrap();
-                    if graph_edge.label != edge.label {
-                        graph_edge.label = edge.label.clone();
+                    let graph_edge = graph.mut_edge_label(node_indexes[index], node_indexes[edge.to]);
+                    if *graph_edge != edge.label {
+                        *graph_edge = edge.label.clone();
                     }
                 }
             }

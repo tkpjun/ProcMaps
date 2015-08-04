@@ -1,11 +1,13 @@
-//use std::collections::HashMap;
 use graph_grammar::labels::Symbol;
 use graph_grammar::labels::SymbolSet;
+use super::ser_symbol::SerSymbol;
+use graph_grammar::labels::SearchLabel;
+use serde::json::Value;
 
 #[derive(Clone, Eq, PartialEq, Debug)]
 pub struct NodeLabel {
-    name: String,
-    subtype: u32,
+    pub name: String,
+    pub subtype: i32,
 }
 impl Symbol for NodeLabel {}
 impl SymbolSet<NodeLabel> for NodeLabel {
@@ -14,14 +16,36 @@ impl SymbolSet<NodeLabel> for NodeLabel {
     }
 }
 
+impl SerSymbol for NodeLabel {
+    fn parse(name: &str, value: &Value) -> Option<NodeLabel> {
+        unimplemented!()
+    }
+}
+impl SerSymbol for SearchLabel<NodeLabel> {
+    fn parse(name: &str, value: &Value) -> Option<SearchLabel<NodeLabel>> {
+        unimplemented!()
+    }
+}
+
+
 #[derive(Clone, Eq, PartialEq, Debug)]
 pub struct EdgeLabel {
-    name: String,
-    target: NodeLabel,
+    pub name: String,
 }
 impl Symbol for EdgeLabel {}
 impl SymbolSet<EdgeLabel> for EdgeLabel {
     fn is_superset_of(&self, other: &EdgeLabel) -> bool {
         *self == *other
+    }
+}
+
+impl SerSymbol for EdgeLabel {
+    fn parse(name: &str, value: &Value) -> Option<EdgeLabel> {
+        unimplemented!()
+    }
+}
+impl SerSymbol for SearchLabel<EdgeLabel> {
+    fn parse(name: &str, value: &Value) -> Option<SearchLabel<EdgeLabel>> {
+        unimplemented!()
     }
 }

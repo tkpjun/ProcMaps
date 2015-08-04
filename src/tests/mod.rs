@@ -1,5 +1,7 @@
 mod graph;
 mod rules;
+mod parsing;
+
 use graph_grammar::labels::Symbol;
 
 #[allow(dead_code)]

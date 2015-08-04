@@ -1,5 +1,5 @@
 use graph_grammar::graph::DirectedGraph;
-use graph_grammar::labels::Symbol;
+//use graph_grammar::labels::Symbol;
 use tests::DummyLabel::{self, A, B, C};
 
 #[test]

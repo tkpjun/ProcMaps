@@ -30,13 +30,13 @@ impl<T: Eq + Clone, S: Eq + Clone> DirectedGraph<T, S> {
         DirectedGraph{ data: Vec::new() }
     }
 
-    pub fn from_vec(nodes: &[T], edges: &[(S, usize, usize)]) -> DirectedGraph<T, S> {
+    pub fn from_vec(nodes: &[T], edges: &[(usize, usize, S)]) -> DirectedGraph<T, S> {
         let mut g = DirectedGraph{ data: Vec::new() };
         for node in nodes {
             g.push_node(node.clone());
         }
         for edge in edges {
-            g.add_edge(edge.1, edge.2, edge.0.clone(), true);
+            g.add_edge(edge.0, edge.1, edge.2.clone(), true);
         }
         return g;
     }
@@ -54,8 +54,12 @@ impl<T: Eq + Clone, S: Eq + Clone> DirectedGraph<T, S> {
         &self.data[index]
     }
 
-    pub fn mut_node(&mut self, index: usize) -> &mut DirectedNode<T, S> {
-        &mut self.data[index]
+    pub fn mut_label(&mut self, index: usize) -> &mut T {
+        &mut self.data[index].label
+    }
+
+    pub fn mut_edge_label(&mut self, start_index: usize, target_index: usize) -> &mut S {
+        &mut self.data[start_index].to.iter_mut().find(|e| e.to == target_index).unwrap().label
     }
 
     pub fn remove_node(&mut self, index: usize) {
