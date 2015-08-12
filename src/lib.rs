@@ -9,10 +9,6 @@ pub mod deserialization {
     pub mod ser_symbol;
     pub mod json;
 }
-pub mod graph_grammar {
-    pub mod graph;
-    pub mod rule;
-    pub mod labels;
-}
+pub mod graph_grammar;
 #[cfg(test)]
 mod tests;

@@ -4,11 +4,11 @@
   "rules": [
     {
       "start": {
-        "nodes": [ ["Is", ["Init", 0] ] ],
+        "nodes": [ ["Is", ["Null"] ] ],
         "edges": []
       },
       "result": {
-        "nodes": [ ["LevelEntry", 0], ["LevelExit", 0] ],
+        "nodes": [ ["LevelEntry"], ["LevelExit"] ],
         "edges": [ [0, 1, "Loose"] ]
       },
       "sameNodes": [

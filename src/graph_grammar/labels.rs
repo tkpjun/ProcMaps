@@ -1,12 +1,12 @@
 use std::fmt::Debug;
 
-pub trait Symbol: Eq + Clone + Debug {}
+pub trait Symbol: PartialEq + Clone + Debug {}
 
 pub trait SymbolSet<T: Symbol>: Symbol {
     fn is_superset_of(&self, other: &T) -> bool;
 }
 
-#[derive(Clone, Eq, PartialEq, Debug)]
+#[derive(Clone, PartialEq, Debug)]
 pub enum SearchLabel<T: Symbol> {
     Some(Vec<T>),
     Not(Vec<T>),

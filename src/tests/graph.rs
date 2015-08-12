@@ -25,8 +25,8 @@ fn build() -> DirectedGraph<DummyLabel, DummyLabel> {
     g.push_node(A);
     g.push_node(B);
     g.push_node(C);
-    g.add_edge(0, 1, A, false);
-    g.add_edge(1, 2, A, true);
-    g.add_edge(2, 0, A, true);
+    g.add_undir_edge(0, 1, A);
+    g.add_edge(1, 2, A);
+    g.add_edge(2, 0, A);
     return g;
 }

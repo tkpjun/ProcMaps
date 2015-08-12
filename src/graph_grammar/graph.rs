@@ -1,30 +1,31 @@
 use std::fmt::Debug;
 
 #[derive(Clone)]
-pub struct DirectedNode<NodeType: Eq + Clone, EdgeType: Eq + Clone> {
+pub struct DirectedNode<NodeType: PartialEq + Clone, EdgeType: PartialEq + Clone> {
     pub label: NodeType,
     pub to: Vec<Edge<EdgeType>>,
     pub from: Vec<usize>,
 }
 
 #[derive(Clone)]
-pub struct Edge<T: Eq + Clone> {
+pub struct Edge<T: PartialEq + Clone> {
     pub label: T,
     pub from: usize,
     pub to: usize,
 }
 
-impl<T: Eq + Clone> Edge<T> {
+impl<T: PartialEq + Clone> Edge<T> {
     pub fn matches(&self, other: (usize, usize)) -> bool {
         (self.from, self.to) == other
     }
 }
 
-pub struct DirectedGraph<NodeType: Eq + Clone, EdgeType: Eq + Clone> {
+#[derive(Clone)]
+pub struct DirectedGraph<NodeType: PartialEq + Clone, EdgeType: PartialEq + Clone> {
     data: Vec<DirectedNode<NodeType, EdgeType>>
 }
 
-impl<T: Eq + Clone, S: Eq + Clone> DirectedGraph<T, S> {
+impl<T: PartialEq + Clone, S: PartialEq + Clone> DirectedGraph<T, S> {
 
     pub fn new() -> DirectedGraph<T, S> {
         DirectedGraph{ data: Vec::new() }
@@ -36,7 +37,7 @@ impl<T: Eq + Clone, S: Eq + Clone> DirectedGraph<T, S> {
             g.push_node(node.clone());
         }
         for edge in edges {
-            g.add_edge(edge.0, edge.1, edge.2.clone(), true);
+            g.add_edge(edge.0, edge.1, edge.2.clone());
         }
         return g;
     }
@@ -120,27 +121,19 @@ impl<T: Eq + Clone, S: Eq + Clone> DirectedGraph<T, S> {
         }
     }
 
-    //Doesnt make sure the opposite end has the same path
-    pub fn set_edges(&mut self, index: usize, edges: &[Edge<S>]) {
-        self.data[index].from.clear();
-        self.data[index].to.clear();
-        for edge in edges {
-            let from = edge.from;
-            let to = edge.to;
-            self.data[edge.from].to.push(edge.clone());
-            self.data[to].from.push(from);
-        }
-    }
-
-    pub fn add_edge(&mut self, from: usize, to: usize, label: S, is_directed: bool) {
+    pub fn add_edge(&mut self, from: usize, to: usize, label: S) {
         let edge = Edge{label: label.clone(), from: from, to: to};
         self.data[from].to.push(edge);
         self.data[to].from.push(from);
-        if !is_directed {
-            let edge = Edge{label: label, from: to, to: from};
-            self.data[to].to.push(edge);
-            self.data[from].from.push(to);
-        }
+    }
+
+    pub fn add_undir_edge(&mut self, from: usize, to: usize, label: S) {
+        let edge = Edge{label: label.clone(), from: from, to: to};
+        self.data[from].to.push(edge);
+        self.data[to].from.push(from);
+        let edge = Edge{label: label, from: to, to: from};
+        self.data[to].to.push(edge);
+        self.data[from].from.push(to);
     }
 
     pub fn remove_edge(&mut self, from: usize, to: usize) {
@@ -194,9 +187,17 @@ impl<T: Eq + Clone, S: Eq + Clone> DirectedGraph<T, S> {
         }
         None
     }
+
+    pub fn cut_at(&mut self, node1: T, node2: T) -> Option<DirectedGraph<T, S>> {
+        unimplemented!();
+    }
+
+    pub fn connect_at(&mut self, s_node: T, other: DirectedGraph<T, S>, o_node: T) {
+        unimplemented!();
+    }
 }
 
-impl<T: Debug + Eq + Clone, S: Debug + Eq + Clone> ToString for DirectedGraph<T, S> {
+impl<T: Debug + PartialEq + Clone, S: Debug + PartialEq + Clone> ToString for DirectedGraph<T, S> {
     fn to_string(&self) -> String {
         let mut s = String::new();
         for node in &self.data {

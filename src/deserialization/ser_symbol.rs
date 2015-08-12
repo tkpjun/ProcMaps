@@ -10,15 +10,24 @@ pub trait SerSymbol: Symbol {
 
 impl SerSymbol for MissionNode {
     fn parse(name: &str, value: &Value) -> Option<MissionNode> {
+        //also take string keywords such as "uniq" for dynamic values?
+        //and random range arrays?
         if let Some(i) = value.as_i64() {
             match name {
-                "Init" => Some(MissionNode::Init),
-                "LevelEntry" => Some(MissionNode::LevelEntry(i as i32)),
-                "LevelExit" => Some(MissionNode::LevelExit(i as i32)),
+                "Null" => Some(MissionNode::Null),
+                "LevelEntry" => Some(MissionNode::LevelEntry),
+                "LevelExit" => Some(MissionNode::LevelExit),
                 _ => None
             }
         }
-        else { None }
+        else {
+            match name {
+                "Null" => Some(MissionNode::Null),
+                "LevelEntry" => Some(MissionNode::LevelEntry),
+                "LevelExit" => Some(MissionNode::LevelExit),
+                _ => None
+            }
+        }
     }
 }
 
@@ -32,7 +41,7 @@ impl SerSymbol for SearchLabel<MissionNode> {
         for opt in arr.into_iter().skip(1).map(Value::as_array) {
             match opt {
                 Some(a) => match a[0].as_string() {
-                        Some(s)=> content.push((s, a[1].clone())),
+                        Some(s)=> content.push((s, a.get(1).unwrap_or(&Value::Null).clone())),
                         _ => { return None; }
                     },
                 None => { return None; }

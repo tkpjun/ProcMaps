@@ -156,10 +156,9 @@ where S: SerSymbol, T: SerSymbol {
             for n in ns {
                 if let Some(arr) = n.as_array() {
                     ret.reserve_exact(arr.len());
-                    match (arr.get(0).and_then(Value::as_string),
-                           arr.get(1)) {
-                        (Some(s), Some(i)) => {
-                             if let Some(node) = S::parse(s, &i) {
+                    match arr.get(0).and_then(Value::as_string) {
+                        Some(s) => {
+                             if let Some(node) = S::parse(s, arr.get(1).unwrap_or(&Value::Null)) {
                                  ret.push(node);
                              }
                              else { return None; }

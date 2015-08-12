@@ -4,10 +4,10 @@ use super::ser_symbol::SerSymbol;
 use graph_grammar::labels::SearchLabel;
 use serde::json::Value;
 
-#[derive(Clone, Eq, PartialEq, Debug)]
+#[derive(Clone, PartialEq, Debug)]
 pub struct NodeLabel {
     pub name: String,
-    pub subtype: i32,
+    pub data: Value,
 }
 impl Symbol for NodeLabel {}
 impl SymbolSet<NodeLabel> for NodeLabel {

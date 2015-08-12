@@ -4,9 +4,10 @@ use graph_grammar::labels::SymbolSet;
 
 #[derive(Clone, Eq, PartialEq, Debug)]
 pub enum NodeLabel {
-    Init,
-    LevelEntry(i32),
-    LevelExit(i32),
+    Null,
+    LevelEntry,
+    LevelExit,
+    UndevelopedArea(i32),
     AreaEntry(i32),
     AreaExit(i32),
     Chain(i32),
@@ -18,8 +19,7 @@ pub enum NodeLabel {
     Puzzle(i32),
     Key(i32),
     Lock(i32),
-    MultiKey(i32),
-    MultiLock(i32),
+    MultiLock(Vec<i32>),
     Event(i32),
     EventLock(i32),
     SecretDoor(i32),

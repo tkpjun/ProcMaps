@@ -127,6 +127,8 @@ impl<S: Symbol, T: Symbol, U: SymbolSet<S>, V: SymbolSet<T>> Rule<S, T, U, V> {
     }
 
     fn alter_old(&self, graph: &mut DirectedGraph<S, T>, subgraph: &[usize]) -> Vec<usize> {
+        //update to remove all edges between nodes in start instead of just ones that point to
+        //nodes that don't exist in result
         let mut new_sub = subgraph.iter().map(|&i| i).collect::<Vec<usize>>();
         for start_index in 0..subgraph.len() {
             if let Some(result_index) = self.start_to_res.get(&start_index) {
@@ -157,8 +159,8 @@ impl<S: Symbol, T: Symbol, U: SymbolSet<S>, V: SymbolSet<T>> Rule<S, T, U, V> {
     }
 
     fn add_new(&self, graph: &mut DirectedGraph<S, T>, subgraph: &[usize]) {
+        //update to add all edges in result, because all edges between nodes have been removed
         let node_indexes = self.build_result_subgraph(graph, subgraph);
-
         for index in 0..self.result.nodes() {
             let res_node = self.result.get_node(index);
             let start_node = self.res_to_start.get(&index);
@@ -167,7 +169,7 @@ impl<S: Symbol, T: Symbol, U: SymbolSet<S>, V: SymbolSet<T>> Rule<S, T, U, V> {
                 if start_node.is_none() || start_target.is_none() ||
                    self.start.get_node(*start_node.unwrap()).to.iter()
                         .all(|e| e.to != *start_target.unwrap()) {
-                    graph.add_edge(node_indexes[index], node_indexes[edge.to], edge.label.clone(), true);
+                    graph.add_edge(node_indexes[index], node_indexes[edge.to], edge.label.clone());
                 }
                 else {
                     let graph_edge = graph.mut_edge_label(node_indexes[index], node_indexes[edge.to]);
