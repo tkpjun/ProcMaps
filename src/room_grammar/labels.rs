@@ -6,10 +6,11 @@ use mission_grammar::labels::EdgeLabel as MissionEdge;
 
 #[derive(Clone, Eq, PartialEq, Debug)]
 pub enum NodeLabel {
-    Room(MissionNode, u32),
+    Room(Vec<MissionNode>),
     Corridor(MissionNode),
-    Intersection(MissionNode, u32),
-    Undeveloped(DirectedGraph<MissionNode, MissionEdge>, usize, u32),
+    Intersection(MissionNode),
+    OpenTerrain(Vec<MissionNode>),
+    Undeveloped(DirectedGraph<MissionNode, MissionEdge>, usize),
 }
 impl Symbol for NodeLabel {}
 impl SymbolSet<NodeLabel> for NodeLabel {
@@ -23,10 +24,10 @@ pub enum EdgeLabel {
     Doorway,
     //OneWayDoorway,
     SecretDoor,
-    ChangeZ(u32, u32),
-    //OneWayElevChange(u32, u32),
+    LateralMove,
     Warp,
     //OneWayWarp,
+    OpenTerrain,
 }
 impl Symbol for EdgeLabel {}
 impl SymbolSet<EdgeLabel> for EdgeLabel {

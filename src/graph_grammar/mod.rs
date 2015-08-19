@@ -4,4 +4,6 @@ pub mod labels;
 pub mod contract;
 pub mod ruleset;
 
-pub enum Either<S, T> { One(S), Another(T) }
+use std::borrow::Borrow;
+
+pub enum Either<S, T: Borrow<[S]>> { Single(S), List(T) }

@@ -4,16 +4,15 @@ use super::graph::DirectedGraph;
 use super::labels::Symbol;
 use super::labels::SymbolSet;
 use rand::{self, Rng, SeedableRng, XorShiftRng};
-use super::Either::{self, One, Another};
+use super::Either::{self, Single, List};
 
 pub struct RuleSet<S: Symbol, T: Symbol, U: SymbolSet<S>, V: SymbolSet<T>> {
     rules: Vec<Rule<S, T, U, V>>,
     weights: Vec<f32>, //for choosing which rule to apply
-    weight_shift: Box<Fn(f32, u32) -> f32>,
-    //hard_maximums: Vec<Option<i32>>,
+    weight_shift: Box<Fn(&[f32], usize, i32) -> f32>,
     contract: GraphContract,
     graph: Option<DirectedGraph<S, T>>,
-    rounds_taken: u32,
+    rounds_taken: i32,
     rng: XorShiftRng,
     //target_params, //for choosing which subgraph to apply the rule on
 }
@@ -22,18 +21,18 @@ impl<S: Symbol, T: Symbol, U: SymbolSet<S>, V: SymbolSet<T>> RuleSet<S, T, U, V>
 
     pub fn new(rules: Vec<Rule<S, T, U, V>>,
                weights: Either<f32, Vec<f32>>,
-               weight_shift: Box<Fn(f32, u32) -> f32>,
+               weight_shift: Box<Fn(&[f32], usize, i32) -> f32>,
                contract: GraphContract)
                -> RuleSet<S, T, U, V> {
         let ws = match weights {
-            One(w) => {
+            Single(w) => {
                 let mut vec = Vec::with_capacity(rules.len());
                 for _ in &rules {
                     vec.push(w);
                 }
                 vec
             },
-            Another(vec) => vec
+            List(vec) => vec
         };
         if ws.len() != rules.len() {
             panic!("Rules and weights vectors' lengths don't match!");
@@ -55,6 +54,12 @@ impl<S: Symbol, T: Symbol, U: SymbolSet<S>, V: SymbolSet<T>> RuleSet<S, T, U, V>
     }
 
     pub fn take_graph(&mut self) -> Option<DirectedGraph<S, T>> {
+        assert!(if let Some(g) = self.graph.as_ref() {
+            self.contract.holds_for(g)
+        }
+        else {
+            true
+        });
         self.rounds_taken = 0;
         self.graph.take()
     }
@@ -95,8 +100,8 @@ impl<S: Symbol, T: Symbol, U: SymbolSet<S>, V: SymbolSet<T>> RuleSet<S, T, U, V>
 
                 self.rounds_taken += 1;
                 round += 1;
-                let new = &*self.weight_shift;
-                self.weights[index] = new(self.weights[index], self.rounds_taken);
+                let new_wt = &*self.weight_shift;
+                self.weights[index] = new_wt(&self.weights, index, self.rounds_taken);
                 if round < amount { alt_weights = self.weights.clone(); }
             }
             else {

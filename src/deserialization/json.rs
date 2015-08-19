@@ -5,8 +5,11 @@ use mission_grammar::labels::EdgeLabel as MissionEdge;
 use super::ser_symbol::SerSymbol;
 use graph_grammar::graph::DirectedGraph;
 use graph_grammar::rule::Rule;
+use graph_grammar::ruleset::RuleSet;
 use graph_grammar::labels::SearchLabel;
 use graph_grammar::labels::SymbolSet;
+use graph_grammar::contract::GraphContract;
+use graph_grammar::Either;
 use serde::json::{self, Value};
 use serde::json::Error as jsonError;
 use std::fs::File;
@@ -14,17 +17,30 @@ use std::io::prelude::*;
 use std::path::Path;
 use std::collections::BTreeMap;
 use std::collections::HashMap;
+use std::default::Default;
 
 pub fn read_value(path: &str) -> Result<Value, jsonError> {
     read_file(&path).and_then(|file| json::from_str(&file))
 }
 
-pub fn mission_rules_simple(value: &Value) -> Result<Vec<Rule<MissionNode, MissionEdge, MissionNode, MissionEdge>>, jsonError> {
-    none_checked(get_rules::<MissionNode, MissionEdge, MissionNode, MissionEdge>(value))
+pub fn mission_rules_simple(value: &Value) -> Result<RuleSet<MissionNode, MissionEdge, MissionNode, MissionEdge>, jsonError> {
+    get_ruleset::<MissionNode, MissionEdge, MissionNode, MissionEdge>(value)
 }
 
-pub fn mission_rules(value: &Value) -> Result<Vec<Rule<MissionNode, MissionEdge, SearchLabel<MissionNode>, SearchLabel<MissionEdge>>>, jsonError> {
-    none_checked(get_rules::<MissionNode, MissionEdge, SearchLabel<MissionNode>, SearchLabel<MissionEdge>>(value))
+pub fn mission_rules(value: &Value) -> Result<RuleSet<MissionNode, MissionEdge, SearchLabel<MissionNode>, SearchLabel<MissionEdge>>, jsonError> {
+    get_ruleset::<MissionNode, MissionEdge, SearchLabel<MissionNode>, SearchLabel<MissionEdge>>(value)
+}
+
+fn get_ruleset<S, T, U, V>(value: &Value) -> Result<RuleSet<S, T, U, V>, jsonError>
+where S: SerSymbol, T: SerSymbol, U: SerSymbol + SymbolSet<S>, V: SerSymbol + SymbolSet<T> {
+    let rules_and_weights = try!(none_checked(get_rules(value)));
+    let contract = try!(get_contract(value));
+    let function = |weights: &[f32], index: usize, _: i32| -> f32 {
+        weights[index] / 2.0
+    };
+    let weights = rules_and_weights.iter().map(|&(_, w)| w).collect();
+    let rules = rules_and_weights.into_iter().map(|(r, _)| r).collect();
+    Ok(RuleSet::new(rules, Either::List(weights), Box::new(function), contract))
 }
 
 fn none_checked<T>(option: Option<Vec<Option<T>>>) -> Result<Vec<T>, jsonError> {
@@ -49,25 +65,44 @@ fn read_file(path: &str) -> Result<String, jsonError> {
     return Ok(content);
 }
 
+fn get_contract(value: &Value) -> Result<GraphContract, jsonError> {
+    if let Some(map) = value.as_object()
+                            .and_then(|o| o.get("contract"))
+                            .and_then(Value::as_object) {
+
+        let mut contract = GraphContract::default();
+
+        if let Some(thing) = map.get("isAcyclic") {
+            match thing.as_boolean() {
+                Some(b) => { contract.is_acyclic = b; },
+                None => { return Err(jsonError::MissingFieldError("Invalid value for contract: isAcyclic")); }
+            }
+        }
+        if let Some(thing) = map.get("maxEdgesPerNode") {
+            match thing.as_u64() {
+                Some(u) => { contract.max_edges_per_node = Some(u as u32); },
+                None => { return Err(jsonError::MissingFieldError("Invalid value for contract: maxEdgesPerNode")); }
+            }
+        }
+        if let Some(thing) = map.get("isConnected") {
+            match thing.as_boolean() {
+                Some(b) => { contract.is_connected = b; },
+                None => { return Err(jsonError::MissingFieldError("Invalid value for contract: isConnected")); }
+            }
+        }
+        Ok(contract)
+    }
+    else {
+        Err(jsonError::MissingFieldError("Graph contract missing!"))
+    }
+}
+
 fn get_labels(value: &Value) -> (Vec<UntypedNode>, Vec<UntypedEdge>) {
     unimplemented!();
 }
 
-fn get_rules<S, T, U, V>(value: &Value) -> Option<Vec<Option<Rule<S, T, U, V>>>>
+fn get_rules<S, T, U, V>(value: &Value) -> Option<Vec<Option<(Rule<S, T, U, V>, f32)>>>
 where S: SerSymbol, T: SerSymbol, U: SerSymbol + SymbolSet<S>, V: SerSymbol + SymbolSet<T> {
-    /*let obj = value.as_object();
-    let label_set = match obj.and_then(|o| o.get("labelSet"))
-                                           .and_then(Value::as_string) {
-        Some("missionGrammar") => MissionGrammar,
-        Some("other") => Other,
-        None => Other,
-        _ => return None,
-    };
-    let uses_search_labels = match obj.and_then(|o| o.get("searchLabels"))
-                                      .and_then(Value::as_boolean) {
-        Some(true) => true,
-        _ => false,
-    };*/
     value.as_object()
          .and_then(|o| o.get("rules"))
          .and_then(Value::as_array)
@@ -78,8 +113,12 @@ where S: SerSymbol, T: SerSymbol, U: SerSymbol + SymbolSet<S>, V: SerSymbol + Sy
          )
 }
 
-fn create_rule<S, T, U, V>(map: Option<&BTreeMap<String, Value>>) -> Option<Rule<S, T, U, V>>
+fn create_rule<S, T, U, V>(map: Option<&BTreeMap<String, Value>>) -> Option<(Rule<S, T, U, V>, f32)>
 where S: SerSymbol, T: SerSymbol, U: SerSymbol + SymbolSet<S>, V: SerSymbol + SymbolSet<T> {
+    let weight = match map.and_then(|m| m.get("weight")) {
+        Some(val) => val.as_f64(),
+        None => Some(1.0)
+    };
     let start = map.and_then(|m| m.get("start"))
                    .and_then(Value::as_object)
                    .and_then(|o| parse_start::<S, T, U, V>(o));
@@ -89,8 +128,8 @@ where S: SerSymbol, T: SerSymbol, U: SerSymbol + SymbolSet<S>, V: SerSymbol + Sy
     let same = map.and_then(|m| m.get("sameNodes"))
                   .and_then(Value::as_array)
                   .and_then(parse_same_nodes);
-    if start.as_ref().and(result.as_ref()).and(same.as_ref()).is_some() {
-        Some(Rule::new(start.unwrap(), result.unwrap(), same.unwrap()))
+    if start.as_ref().and(result.as_ref()).and(same.as_ref()).and(weight.as_ref()).is_some() {
+        Some((Rule::new(start.unwrap(), result.unwrap(), same.unwrap()), weight.unwrap() as f32))
     }
     else {
         None

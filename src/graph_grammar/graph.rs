@@ -156,38 +156,6 @@ impl<T: PartialEq + Clone, S: PartialEq + Clone> DirectedGraph<T, S> {
         self.data[to].from.swap_remove(i);
     }
 
-    //Returns the shortest path to the target in reverse: target is result[0].
-    pub fn bfs(&self, start: usize, exclude: usize, target: &T) -> Option<Vec<usize>> {
-        let mut search = vec![ListNode{val: start, prev: 0}];
-        let mut marked = vec![exclude];
-        let build_ret = |space: &Vec<ListNode<usize>>| -> Option<Vec<usize>> {
-            let index = space.len() - 1;
-            let mut ret = vec![space[index].val];
-            let mut next = space[index].prev;
-            while next > 0 {
-                ret.push(space[next].val);
-                next = space[next].prev;
-            }
-            return Some(ret);
-        };
-
-        let mut i = 0;
-        while i <= search.len() {
-            for path in &self.data[search[i].val].to {
-                if self.data[path.to].label == *target {
-                    search.push(ListNode{val: path.to, prev: i});
-                    return build_ret(&search);
-                }
-                if marked.iter().all(|a| *a != path.to) {
-                    marked.push(path.to);
-                    search.push(ListNode{val: path.to, prev: i});
-                }
-            }
-            i += 1;
-        }
-        None
-    }
-
     pub fn cut_at(&mut self, node1: T, node2: T) -> Option<DirectedGraph<T, S>> {
         unimplemented!();
     }
@@ -219,9 +187,4 @@ impl<T: Debug + PartialEq + Clone, S: Debug + PartialEq + Clone> ToString for Di
         }
         s
     }
-}
-
-struct ListNode<T> {
-    val: T,
-    prev: usize,
 }

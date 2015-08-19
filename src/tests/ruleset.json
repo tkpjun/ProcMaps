@@ -1,8 +1,11 @@
 {
   "labelSet": "missionGrammar",
   "searchLabels": true,
-  "rules": [
+  "contract": { "isAcyclic": true },
+  "rules":
+  [
     {
+      "weight": 1,
       "start": {
         "nodes": [ ["Is", ["Null"] ] ],
         "edges": []
@@ -11,9 +14,7 @@
         "nodes": [ ["LevelEntry"], ["LevelExit"] ],
         "edges": [ [0, 1, "Loose"] ]
       },
-      "sameNodes": [
-        [0, 0]
-      ]
+      "sameNodes": [ [0, 0] ]
     }
   ]
 }
