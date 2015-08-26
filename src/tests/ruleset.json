@@ -11,10 +11,56 @@
         "edges": []
       },
       "result": {
-        "nodes": [ ["LevelEntry"], ["LevelExit"] ],
-        "edges": [ [0, 1, "Loose"] ]
+        "nodes": [
+          ["LevelEntry"],
+          ["Pattern", 0],
+          ["Gate", 0],
+          ["MiniBoss", 0],
+          ["AbilityItem", 1],
+          ["Tutorial", 1],
+          ["Pattern", 1],
+          ["Gate", 1],
+          ["LevelExit"]
+        ],
+        "edges": [
+          [0, 1, "Loose"],
+          [1, 2, "Loose"],
+          [2, 3, "Tight"],
+          [3, 4, "Tight"],
+          [4, 5, "Tight"],
+          [5, 6, "Tight"],
+          [6, 7, "Loose"],
+          [7, 8, "Loose"]
+        ]
+      }
+    },
+    {
+      "weight": 1,
+      "start": {
+        "nodes": [ ["Is", ["Pattern", 1]], ["Is", ["Gate", 1]] ],
+        "edges": [ [0, 1, "Is", "Loose"] ]
       },
-      "sameNodes": [ [0, 0] ]
+      "result": {
+        "nodes": [
+          ["Pattern", 0],
+          ["Gate", 1],
+          ["Lock", 1],
+          ["Boss", 1],
+          ["Challenge", 1],
+          ["Key", 1],
+          ["DeadEnd"]
+        ],
+        "edges": [
+          [0, 1, "Loose"],
+          [1, 2, "Tight"],
+          [2, 3, "Tight"],
+          [0, 4, "Loose"],
+          [4, 5, "Tight"],
+          [5, 2, "Loose"],
+          [5, 6, "Loose"]
+        ]
+      },
+      "sameNodes": [ [0, 0], [1, 3] ]
     }
   ]
 }

@@ -13,10 +13,27 @@ impl SerSymbol for MissionNode {
         //also take string keywords such as "uniq" for dynamic values?
         //and random range arrays?
         if let Some(i) = value.as_i64() {
+            let sub = i as i32;
             match name {
-                "Null" => Some(MissionNode::Null),
-                "LevelEntry" => Some(MissionNode::LevelEntry),
-                "LevelExit" => Some(MissionNode::LevelExit),
+                "AreaEntry" => Some(MissionNode::AreaEntry(sub)),
+                "AreaExit" => Some(MissionNode::AreaExit(sub)),
+                "Pattern" => Some(MissionNode::Pattern(sub)),
+                "Gate" => Some(MissionNode::Gate(sub)),
+                "Challenge" => Some(MissionNode::Challenge(sub)),
+                "Enemies" => Some(MissionNode::Enemies(sub)),
+                "Puzzle" => Some(MissionNode::Puzzle(sub)),
+                "Boss" => Some(MissionNode::Boss(sub)),
+                "MiniBoss" => Some(MissionNode::MiniBoss(sub)),
+                "Friendly" => Some(MissionNode::Friendly(sub)),
+                "Key" => Some(MissionNode::Key(sub)),
+                "Lock" => Some(MissionNode::Lock(sub, 1)),
+                "Trigger" => Some(MissionNode::Trigger(sub)),
+                "TriggerLock" => Some(MissionNode::TriggerLock(sub, 1)),
+                "Secret" => Some(MissionNode::Secret(sub)),
+                "Reward" => Some(MissionNode::Reward(sub)),
+                "AbilityItem" => Some(MissionNode::AbilityItem(sub)),
+                "Tutorial" => Some(MissionNode::Tutorial(sub)),
+                "Scenery" => Some(MissionNode::Scenery(sub)),
                 _ => None
             }
         }
@@ -25,6 +42,10 @@ impl SerSymbol for MissionNode {
                 "Null" => Some(MissionNode::Null),
                 "LevelEntry" => Some(MissionNode::LevelEntry),
                 "LevelExit" => Some(MissionNode::LevelExit),
+                "LinearChain" => Some(MissionNode::LinearChain),
+                "ParallelChain" => Some(MissionNode::ParallelChain),
+                "Fork" => Some(MissionNode::Fork),
+                "DeadEnd" => Some(MissionNode::DeadEnd),
                 _ => None
             }
         }
@@ -79,7 +100,7 @@ impl SerSymbol for SearchLabel<MissionNode> {
 }
 
 impl SerSymbol for MissionEdge {
-    fn parse(name: &str, value: &Value) -> Option<MissionEdge> {
+    fn parse(name: &str, _: &Value) -> Option<MissionEdge> {
         match name {
             "Tight" => Some(MissionEdge::Tight),
             "Loose" => Some(MissionEdge::Loose),

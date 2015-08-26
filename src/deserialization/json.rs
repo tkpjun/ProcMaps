@@ -11,7 +11,7 @@ use graph_grammar::labels::SymbolSet;
 use graph_grammar::contract::GraphContract;
 use graph_grammar::Either;
 use serde::json::{self, Value};
-use serde::json::Error as jsonError;
+use serde::json::Error as JsonError;
 use std::fs::File;
 use std::io::prelude::*;
 use std::path::Path;
@@ -19,19 +19,19 @@ use std::collections::BTreeMap;
 use std::collections::HashMap;
 use std::default::Default;
 
-pub fn read_value(path: &str) -> Result<Value, jsonError> {
+pub fn read_value(path: &str) -> Result<Value, JsonError> {
     read_file(&path).and_then(|file| json::from_str(&file))
 }
 
-pub fn mission_rules_simple(value: &Value) -> Result<RuleSet<MissionNode, MissionEdge, MissionNode, MissionEdge>, jsonError> {
+pub fn mission_rules_simple(value: &Value) -> Result<RuleSet<MissionNode, MissionEdge, MissionNode, MissionEdge>, JsonError> {
     get_ruleset::<MissionNode, MissionEdge, MissionNode, MissionEdge>(value)
 }
 
-pub fn mission_rules(value: &Value) -> Result<RuleSet<MissionNode, MissionEdge, SearchLabel<MissionNode>, SearchLabel<MissionEdge>>, jsonError> {
+pub fn mission_rules(value: &Value) -> Result<RuleSet<MissionNode, MissionEdge, SearchLabel<MissionNode>, SearchLabel<MissionEdge>>, JsonError> {
     get_ruleset::<MissionNode, MissionEdge, SearchLabel<MissionNode>, SearchLabel<MissionEdge>>(value)
 }
 
-fn get_ruleset<S, T, U, V>(value: &Value) -> Result<RuleSet<S, T, U, V>, jsonError>
+fn get_ruleset<S, T, U, V>(value: &Value) -> Result<RuleSet<S, T, U, V>, JsonError>
 where S: SerSymbol, T: SerSymbol, U: SerSymbol + SymbolSet<S>, V: SerSymbol + SymbolSet<T> {
     let rules_and_weights = try!(none_checked(get_rules(value)));
     let contract = try!(get_contract(value));
@@ -43,29 +43,29 @@ where S: SerSymbol, T: SerSymbol, U: SerSymbol + SymbolSet<S>, V: SerSymbol + Sy
     Ok(RuleSet::new(rules, Either::List(weights), Box::new(function), contract))
 }
 
-fn none_checked<T>(option: Option<Vec<Option<T>>>) -> Result<Vec<T>, jsonError> {
+fn none_checked<T>(option: Option<Vec<Option<T>>>) -> Result<Vec<T>, JsonError> {
     let vec = match option {
         Some(v) => v,
-        None => { return Err(jsonError::MissingFieldError("JSON object has an invalid top-level field!")); }
+        None => { return Err(JsonError::MissingFieldError("JSON object has an invalid top-level field!")); }
     };
     let mut ret = Vec::with_capacity(vec.capacity());
     for value in vec.into_iter() {
         match value {
             Some(thing) => { ret.push(thing); }
-            None => { return Err(jsonError::MissingFieldError("Some rule object has an invalid field!")); }
+            None => { return Err(JsonError::MissingFieldError("Some rule object has an invalid field!")); }
         }
     }
     Ok(ret)
 }
 
-fn read_file(path: &str) -> Result<String, jsonError> {
+fn read_file(path: &str) -> Result<String, JsonError> {
     let path = Path::new(path);
     let mut content = String::new();
     try!(File::open(&path).and_then(|mut f| f.read_to_string(&mut content)));
     return Ok(content);
 }
 
-fn get_contract(value: &Value) -> Result<GraphContract, jsonError> {
+fn get_contract(value: &Value) -> Result<GraphContract, JsonError> {
     if let Some(map) = value.as_object()
                             .and_then(|o| o.get("contract"))
                             .and_then(Value::as_object) {
@@ -75,25 +75,25 @@ fn get_contract(value: &Value) -> Result<GraphContract, jsonError> {
         if let Some(thing) = map.get("isAcyclic") {
             match thing.as_boolean() {
                 Some(b) => { contract.is_acyclic = b; },
-                None => { return Err(jsonError::MissingFieldError("Invalid value for contract: isAcyclic")); }
+                None => { return Err(JsonError::MissingFieldError("Invalid value for contract: isAcyclic")); }
             }
         }
         if let Some(thing) = map.get("maxEdgesPerNode") {
             match thing.as_u64() {
                 Some(u) => { contract.max_edges_per_node = Some(u as u32); },
-                None => { return Err(jsonError::MissingFieldError("Invalid value for contract: maxEdgesPerNode")); }
+                None => { return Err(JsonError::MissingFieldError("Invalid value for contract: maxEdgesPerNode")); }
             }
         }
         if let Some(thing) = map.get("isConnected") {
             match thing.as_boolean() {
                 Some(b) => { contract.is_connected = b; },
-                None => { return Err(jsonError::MissingFieldError("Invalid value for contract: isConnected")); }
+                None => { return Err(JsonError::MissingFieldError("Invalid value for contract: isConnected")); }
             }
         }
         Ok(contract)
     }
     else {
-        Err(jsonError::MissingFieldError("Graph contract missing!"))
+        Err(JsonError::MissingFieldError("Graph contract missing!"))
     }
 }
 
@@ -125,9 +125,17 @@ where S: SerSymbol, T: SerSymbol, U: SerSymbol + SymbolSet<S>, V: SerSymbol + Sy
     let result = map.and_then(|m| m.get("result"))
                     .and_then(Value::as_object)
                     .and_then(|o| parse_result::<S, T>(o));
-    let same = map.and_then(|m| m.get("sameNodes"))
-                  .and_then(Value::as_array)
-                  .and_then(parse_same_nodes);
+    let same = match map.and_then(|m| m.get("sameNodes")) {
+        Some(val) => val.as_array().and_then(parse_same_nodes),
+        None => if let Some(g) = start.as_ref() {
+            let mut m = HashMap::new();
+            for i in 0..g.nodes() {
+                m.insert(i, i);
+            }
+            Some(m)
+        }
+        else { None }
+    };
     if start.as_ref().and(result.as_ref()).and(same.as_ref()).and(weight.as_ref()).is_some() {
         Some((Rule::new(start.unwrap(), result.unwrap(), same.unwrap()), weight.unwrap() as f32))
     }

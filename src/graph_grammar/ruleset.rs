@@ -48,6 +48,10 @@ impl<S: Symbol, T: Symbol, U: SymbolSet<S>, V: SymbolSet<T>> RuleSet<S, T, U, V>
         }
     }
 
+    pub fn len(&self) -> usize {
+        self.rules.len()
+    }
+
     pub fn put_graph(&mut self, graph: DirectedGraph<S, T>) {
         assert!(self.contract.holds_for(&graph));
         self.graph = Some(graph);
@@ -72,6 +76,23 @@ impl<S: Symbol, T: Symbol, U: SymbolSet<S>, V: SymbolSet<T>> RuleSet<S, T, U, V>
         self.rng.reseed(seed);
     }
 
+    pub fn apply_rule(&mut self, index: usize) -> bool {
+        let rule = &self.rules[index];
+        let graph = self.graph.as_mut().expect("No graph assigned to ruleset!");
+        let subs = rule.find_subgraphs(graph);
+        if subs.len() > 0 {
+            let sub = &subs[self.rng.gen_range(0, subs.len())];
+            rule.apply_to(graph, sub);
+            self.rounds_taken += 1;
+            let new_wt = &*self.weight_shift;
+            self.weights[index] = new_wt(&self.weights, index, self.rounds_taken);
+        }
+        else {
+            return false;
+        }
+        true
+    }
+
     pub fn apply_rounds(&mut self, amount: u32) -> bool {
         let mut alt_weights = self.weights.clone();
         let mut round = 0;
@@ -90,7 +111,7 @@ impl<S: Symbol, T: Symbol, U: SymbolSet<S>, V: SymbolSet<T>> RuleSet<S, T, U, V>
                 }
                 res
             };
-
+            /*
             let rule = &self.rules[index];
             let graph = self.graph.as_mut().expect("No graph assigned to ruleset!");
             let subs = rule.find_subgraphs(graph);
@@ -102,6 +123,11 @@ impl<S: Symbol, T: Symbol, U: SymbolSet<S>, V: SymbolSet<T>> RuleSet<S, T, U, V>
                 round += 1;
                 let new_wt = &*self.weight_shift;
                 self.weights[index] = new_wt(&self.weights, index, self.rounds_taken);
+                if round < amount { alt_weights = self.weights.clone(); }
+            }*/
+            let sub_found = self.apply_rule(index);
+            if sub_found {
+                round += 1;
                 if round < amount { alt_weights = self.weights.clone(); }
             }
             else {
