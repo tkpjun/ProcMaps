@@ -18,6 +18,7 @@ use std::path::Path;
 use std::collections::BTreeMap;
 use std::collections::HashMap;
 use std::default::Default;
+use std::mem;
 
 pub fn read_value(path: &str) -> Result<Value, JsonError> {
     read_file(&path).and_then(|file| json::from_str(&file))
@@ -33,7 +34,7 @@ pub fn mission_rules(value: &Value) -> Result<RuleSet<MissionNode, MissionEdge, 
 
 fn get_ruleset<S, T, U, V>(value: &Value) -> Result<RuleSet<S, T, U, V>, JsonError>
 where S: SerSymbol, T: SerSymbol, U: SerSymbol + SymbolSet<S>, V: SerSymbol + SymbolSet<T> {
-    let rules_and_weights = try!(none_checked(get_rules(value)));
+    let rules_and_weights = try!(err_checked(get_rules(value)));
     let contract = try!(get_contract(value));
     let function = |weights: &[f32], index: usize, _: i32| -> f32 {
         weights[index] / 2.0
@@ -43,16 +44,23 @@ where S: SerSymbol, T: SerSymbol, U: SerSymbol + SymbolSet<S>, V: SerSymbol + Sy
     Ok(RuleSet::new(rules, Either::List(weights), Box::new(function), contract))
 }
 
-fn none_checked<T>(option: Option<Vec<Option<T>>>) -> Result<Vec<T>, JsonError> {
+fn err_checked<T>(option: Option<Vec<Result<T, String>>>) -> Result<Vec<T>, JsonError> {
     let vec = match option {
         Some(v) => v,
-        None => { return Err(JsonError::MissingFieldError("JSON object has an invalid top-level field!")); }
+        None => { return Err(JsonError::MissingFieldError("JSON object: missing or invalid field 'rules'")); }
     };
     let mut ret = Vec::with_capacity(vec.capacity());
-    for value in vec.into_iter() {
+    for (index, value) in vec.into_iter().enumerate() {
         match value {
-            Some(thing) => { ret.push(thing); }
-            None => { return Err(JsonError::MissingFieldError("Some rule object has an invalid field!")); }
+            Ok(thing) => { ret.push(thing); }
+            Err(s) => {
+                let string = format!("Rule object {}: {}", index, s);
+                unsafe {
+                    let static_ref = mem::transmute(&string as &str);
+                    mem::forget(string);
+                    return Err(JsonError::MissingFieldError(static_ref));
+                }
+            }
         }
     }
     Ok(ret)
@@ -75,25 +83,25 @@ fn get_contract(value: &Value) -> Result<GraphContract, JsonError> {
         if let Some(thing) = map.get("isAcyclic") {
             match thing.as_boolean() {
                 Some(b) => { contract.is_acyclic = b; },
-                None => { return Err(JsonError::MissingFieldError("Invalid value for contract: isAcyclic")); }
+                None => { return Err(JsonError::MissingFieldError("JSON object: invalid value for field 'contract': isAcyclic")); }
             }
         }
         if let Some(thing) = map.get("maxEdgesPerNode") {
             match thing.as_u64() {
                 Some(u) => { contract.max_edges_per_node = Some(u as u32); },
-                None => { return Err(JsonError::MissingFieldError("Invalid value for contract: maxEdgesPerNode")); }
+                None => { return Err(JsonError::MissingFieldError("JSON object: invalid value for 'contract': maxEdgesPerNode")); }
             }
         }
         if let Some(thing) = map.get("isConnected") {
             match thing.as_boolean() {
                 Some(b) => { contract.is_connected = b; },
-                None => { return Err(JsonError::MissingFieldError("Invalid value for contract: isConnected")); }
+                None => { return Err(JsonError::MissingFieldError("JSON object: invalid value for field 'contract': isConnected")); }
             }
         }
         Ok(contract)
     }
     else {
-        Err(JsonError::MissingFieldError("Graph contract missing!"))
+        Err(JsonError::MissingFieldError("JSON object: missing field 'contract'"))
     }
 }
 
@@ -101,7 +109,7 @@ fn get_labels(value: &Value) -> (Vec<UntypedNode>, Vec<UntypedEdge>) {
     unimplemented!();
 }
 
-fn get_rules<S, T, U, V>(value: &Value) -> Option<Vec<Option<(Rule<S, T, U, V>, f32)>>>
+fn get_rules<S, T, U, V>(value: &Value) -> Option<Vec<Result<(Rule<S, T, U, V>, f32), String>>>
 where S: SerSymbol, T: SerSymbol, U: SerSymbol + SymbolSet<S>, V: SerSymbol + SymbolSet<T> {
     value.as_object()
          .and_then(|o| o.get("rules"))
@@ -113,21 +121,25 @@ where S: SerSymbol, T: SerSymbol, U: SerSymbol + SymbolSet<S>, V: SerSymbol + Sy
          )
 }
 
-fn create_rule<S, T, U, V>(map: Option<&BTreeMap<String, Value>>) -> Option<(Rule<S, T, U, V>, f32)>
+fn create_rule<S, T, U, V>(map: Option<&BTreeMap<String, Value>>) -> Result<(Rule<S, T, U, V>, f32), String>
 where S: SerSymbol, T: SerSymbol, U: SerSymbol + SymbolSet<S>, V: SerSymbol + SymbolSet<T> {
     let weight = match map.and_then(|m| m.get("weight")) {
         Some(val) => val.as_f64(),
         None => Some(1.0)
     };
-    let start = map.and_then(|m| m.get("start"))
-                   .and_then(Value::as_object)
-                   .and_then(|o| parse_start::<S, T, U, V>(o));
-    let result = map.and_then(|m| m.get("result"))
-                    .and_then(Value::as_object)
-                    .and_then(|o| parse_result::<S, T>(o));
+    let start = match map.and_then(|m| m.get("start"))
+                         .and_then(Value::as_object) {
+        Some(o) => parse_start::<S, T, U, V>(o),
+        None => Err("field 'start' is invalid".to_string())
+    };
+    let result = match map.and_then(|m| m.get("result"))
+                          .and_then(Value::as_object) {
+        Some(o) => parse_result::<S, T>(o),
+        None => Err("field 'result' is invalid".to_string())
+    };
     let same = match map.and_then(|m| m.get("sameNodes")) {
         Some(val) => val.as_array().and_then(parse_same_nodes),
-        None => if let Some(g) = start.as_ref() {
+        None => if let Ok(g) = start.as_ref() {
             let mut m = HashMap::new();
             for i in 0..g.nodes() {
                 m.insert(i, i);
@@ -136,20 +148,34 @@ where S: SerSymbol, T: SerSymbol, U: SerSymbol + SymbolSet<S>, V: SerSymbol + Sy
         }
         else { None }
     };
-    if start.as_ref().and(result.as_ref()).and(same.as_ref()).and(weight.as_ref()).is_some() {
-        Some((Rule::new(start.unwrap(), result.unwrap(), same.unwrap()), weight.unwrap() as f32))
+    if start.is_ok() && result.is_ok() && weight.is_some() && same.is_some() {
+        Ok((Rule::new(start.unwrap(), result.unwrap(), same.unwrap()), weight.unwrap() as f32))
     }
     else {
-        None
+        let string = if weight.is_none() {
+            "invalid value for field 'weight'".to_string()
+        }
+        else if let Err(s) = start {
+            s
+        }
+        else if let Err(s) = result {
+            s
+        }
+        else {
+            "invalid value for field 'sameNodes'".to_string()
+        };
+
+        Err(string)
     }
 }
 
-fn parse_start<S, T, U, V>(map: &BTreeMap<String, Value>) -> Option<DirectedGraph<U, V>>
+fn parse_start<S, T, U, V>(map: &BTreeMap<String, Value>) -> Result<DirectedGraph<U, V>, String>
 where U: SerSymbol + SymbolSet<S>, V: SerSymbol + SymbolSet<T> {
     let nodes = match map.get("nodes").and_then(Value::as_array) {
         Some(ns) => {
             let mut ret = Vec::new();
-            for n in ns {
+            for i in 0..ns.len() {
+                let n = &ns[i];
                 if let Some(arr) = n.as_array() {
                     ret.reserve_exact(arr.len());
                     match arr.get(0).and_then(Value::as_string) {
@@ -157,21 +183,22 @@ where U: SerSymbol + SymbolSet<S>, V: SerSymbol + SymbolSet<T> {
                             if let Some(node) = U::parse(s, &n) {
                                 ret.push(node);
                             }
-                            else { return None; }
+                            else { return Err(format!("node {} has invalid field", i)); }
                         },
-                        _ => { return None; }
+                        _ => { return Err(format!("node {} has invalid field", i)); }
                     }
                 }
-                else { return None; }
+                else { return Err(format!("node {} is invalid", i)); }
             }
             ret
         },
-        None => { return None; }
+        None => { return Err("missing field 'nodes'".to_string()); }
     };
     let edges = match map.get("edges").and_then(Value::as_array) {
         Some(es) => {
             let mut ret = Vec::new();
-            for e in es {
+            for i in 0..es.len() {
+                let e = &es[i];
                 if let Some(arr) = e.as_array() {
                     ret.reserve_exact(arr.len());
                     match (arr.get(0).and_then(Value::as_u64),
@@ -181,26 +208,27 @@ where U: SerSymbol + SymbolSet<S>, V: SerSymbol + SymbolSet<T> {
                             if let Some(edge) = V::parse(s, &e) {
                                 ret.push((begin as usize, end as usize, edge));
                             }
-                            else { return None; }
+                            else { return Err(format!("edge {} has invalid field", i)); }
                         },
-                        _ => { return None; }
+                        _ => { return Err(format!("edge {} has invalid field", i)); }
                     }
                 }
-                else { return None; }
+                else { return Err(format!("edge {} is invalid", i)); }
             }
             ret
         },
-        None => { return None; }
+        None => { return Err("missing field 'edges'".to_string()); }
     };
-    Some(DirectedGraph::from_vec(&nodes, &edges))
+    Ok(DirectedGraph::from_vec(&nodes, &edges))
 }
 
-fn parse_result<S, T>(map: &BTreeMap<String, Value>) -> Option<DirectedGraph<S, T>>
+fn parse_result<S, T>(map: &BTreeMap<String, Value>) -> Result<DirectedGraph<S, T>, String>
 where S: SerSymbol, T: SerSymbol {
     let nodes = match map.get("nodes").and_then(Value::as_array) {
         Some(ns) => {
             let mut ret = Vec::new();
-            for n in ns {
+            for i in 0..ns.len() {
+                let n = &ns[i];
                 if let Some(arr) = n.as_array() {
                     ret.reserve_exact(arr.len());
                     match arr.get(0).and_then(Value::as_string) {
@@ -208,21 +236,22 @@ where S: SerSymbol, T: SerSymbol {
                              if let Some(node) = S::parse(s, arr.get(1).unwrap_or(&Value::Null)) {
                                  ret.push(node);
                              }
-                             else { return None; }
+                             else { return Err(format!("node {} has invalid field", i)); }
                         },
-                        _ => { return None; }
+                        _ => { return Err(format!("node {} has invalid field", i)); }
                     }
                 }
-                else { return None; }
+                else { return Err(format!("node {} is invalid", i)); }
             }
             ret
         },
-        None => { return None; }
+        None => { return Err("missing field 'nodes'".to_string()); }
     };
     let edges = match map.get("edges").and_then(Value::as_array) {
         Some(es) => {
             let mut ret = Vec::new();
-            for e in es {
+            for i in 0..es.len() {
+                let e = &es[i];
                 if let Some(arr) = e.as_array() {
                     ret.reserve_exact(arr.len());
                     match (arr.get(0).and_then(Value::as_u64),
@@ -232,18 +261,18 @@ where S: SerSymbol, T: SerSymbol {
                             if let Some(edge) = T::parse(s, &Value::Null) {
                                 ret.push((begin as usize, end as usize, edge));
                             }
-                            else { return None; }
+                            else { return Err(format!("edge {} has invalid field", i)); }
                         },
-                        _ => { return None; }
+                        _ => { return Err(format!("edge {} has invalid field", i)); }
                     }
                 }
-                else { return None; }
+                else { return Err(format!("edge {} is invalid", i)); }
             }
             ret
         },
-        None => { return None; }
+        None => { return Err("missing field 'edges'".to_string()); }
     };
-    Some(DirectedGraph::from_vec(&nodes, &edges))
+    Ok(DirectedGraph::from_vec(&nodes, &edges))
 }
 
 fn parse_same_nodes(vec: &Vec<Value>) -> Option<HashMap<usize, usize>> {
