@@ -1,5 +1,6 @@
 use mission_grammar::labels::NodeLabel as MissionNode;
 use mission_grammar::labels::EdgeLabel as MissionEdge;
+use mission_grammar::labels::{AbilityId, KeyId};
 use graph_grammar::labels::Symbol;
 use graph_grammar::labels::SearchLabel;
 use serde::json::Value;
@@ -18,21 +19,25 @@ impl SerSymbol for MissionNode {
                 "AreaEntry" => Some(MissionNode::AreaEntry(sub)),
                 "AreaExit" => Some(MissionNode::AreaExit(sub)),
                 "Pattern" => Some(MissionNode::Pattern(sub)),
-                "Gate" => Some(MissionNode::Gate(sub)),
-                "Challenge" => Some(MissionNode::Challenge(sub)),
-                "Enemies" => Some(MissionNode::Enemies(sub)),
-                "Puzzle" => Some(MissionNode::Puzzle(sub)),
+                "LinearChain" => Some(MissionNode::LinearChain(AbilityId(sub))),
+                "ParallelChain" => Some(MissionNode::ParallelChain(AbilityId(sub))),
+                "Fork" => Some(MissionNode::Fork(AbilityId(sub))),
+                "DeadEnd" => Some(MissionNode::DeadEnd(AbilityId(sub))),
+                "Gate" => Some(MissionNode::Gate(AbilityId(sub))),
+                "Challenge" => Some(MissionNode::Challenge(AbilityId(sub))),
+                "Enemies" => Some(MissionNode::Enemies(AbilityId(sub))),
+                "Puzzle" => Some(MissionNode::Puzzle(AbilityId(sub))),
                 "Boss" => Some(MissionNode::Boss(sub)),
                 "MiniBoss" => Some(MissionNode::MiniBoss(sub)),
                 "Friendly" => Some(MissionNode::Friendly(sub)),
-                "Key" => Some(MissionNode::Key(sub)),
-                "Lock" => Some(MissionNode::Lock(sub, 1)),
-                "Trigger" => Some(MissionNode::Trigger(sub)),
-                "TriggerLock" => Some(MissionNode::TriggerLock(sub, 1)),
+                "Key" => Some(MissionNode::Key(KeyId(sub))),
+                "Lock" => Some(MissionNode::Lock(KeyId(sub), 1)),
+                "Trigger" => Some(MissionNode::Trigger(KeyId(sub))),
+                "TriggerLock" => Some(MissionNode::TriggerLock(KeyId(sub), 1)),
                 "Secret" => Some(MissionNode::Secret(sub)),
                 "Reward" => Some(MissionNode::Reward(sub)),
-                "AbilityItem" => Some(MissionNode::AbilityItem(sub)),
-                "Tutorial" => Some(MissionNode::Tutorial(sub)),
+                "AbilityItem" => Some(MissionNode::AbilityItem(AbilityId(sub))),
+                "Tutorial" => Some(MissionNode::Tutorial(AbilityId(sub))),
                 "Scenery" => Some(MissionNode::Scenery(sub)),
                 _ => None
             }
@@ -42,10 +47,6 @@ impl SerSymbol for MissionNode {
                 "Null" => Some(MissionNode::Null),
                 "LevelEntry" => Some(MissionNode::LevelEntry),
                 "LevelExit" => Some(MissionNode::LevelExit),
-                "LinearChain" => Some(MissionNode::LinearChain),
-                "ParallelChain" => Some(MissionNode::ParallelChain),
-                "Fork" => Some(MissionNode::Fork),
-                "DeadEnd" => Some(MissionNode::DeadEnd),
                 _ => None
             }
         }

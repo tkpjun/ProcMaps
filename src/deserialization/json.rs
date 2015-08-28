@@ -24,11 +24,11 @@ pub fn read_value(path: &str) -> Result<Value, JsonError> {
     read_file(&path).and_then(|file| json::from_str(&file))
 }
 
-pub fn mission_rules_simple(value: &Value) -> Result<RuleSet<MissionNode, MissionEdge, MissionNode, MissionEdge>, JsonError> {
+pub fn mission_rules(value: &Value) -> Result<RuleSet<MissionNode, MissionEdge, MissionNode, MissionEdge>, JsonError> {
     get_ruleset::<MissionNode, MissionEdge, MissionNode, MissionEdge>(value)
 }
 
-pub fn mission_rules(value: &Value) -> Result<RuleSet<MissionNode, MissionEdge, SearchLabel<MissionNode>, SearchLabel<MissionEdge>>, JsonError> {
+pub fn mission_rules_complex(value: &Value) -> Result<RuleSet<MissionNode, MissionEdge, SearchLabel<MissionNode>, SearchLabel<MissionEdge>>, JsonError> {
     get_ruleset::<MissionNode, MissionEdge, SearchLabel<MissionNode>, SearchLabel<MissionEdge>>(value)
 }
 
@@ -56,9 +56,9 @@ fn err_checked<T>(option: Option<Vec<Result<T, String>>>) -> Result<Vec<T>, Json
             Err(s) => {
                 let string = format!("Rule object {}: {}", index, s);
                 unsafe {
-                    let static_ref = mem::transmute(&string as &str);
+                    let ret: &'static str = mem::transmute(&string as &str);
                     mem::forget(string);
-                    return Err(JsonError::MissingFieldError(static_ref));
+                    return Err(JsonError::MissingFieldError(ret));
                 }
             }
         }
@@ -180,19 +180,19 @@ where U: SerSymbol + SymbolSet<S>, V: SerSymbol + SymbolSet<T> {
                     ret.reserve_exact(arr.len());
                     match arr.get(0).and_then(Value::as_string) {
                         Some(s) => {
-                            if let Some(node) = U::parse(s, &n) {
+                            if let Some(node) = U::parse(s, arr.get(1).unwrap_or(&Value::Null)) {
                                 ret.push(node);
                             }
-                            else { return Err(format!("node {} has invalid field", i)); }
+                            else { return Err(format!("field 'start': node {} has invalid field", i)); }
                         },
-                        _ => { return Err(format!("node {} has invalid field", i)); }
+                        _ => { return Err(format!("field 'start': node {} has invalid field", i)); }
                     }
                 }
-                else { return Err(format!("node {} is invalid", i)); }
+                else { return Err(format!("field 'start': node {} is invalid", i)); }
             }
             ret
         },
-        None => { return Err("missing field 'nodes'".to_string()); }
+        None => { return Err("field 'start': missing field 'nodes'".to_string()); }
     };
     let edges = match map.get("edges").and_then(Value::as_array) {
         Some(es) => {
@@ -208,16 +208,16 @@ where U: SerSymbol + SymbolSet<S>, V: SerSymbol + SymbolSet<T> {
                             if let Some(edge) = V::parse(s, &e) {
                                 ret.push((begin as usize, end as usize, edge));
                             }
-                            else { return Err(format!("edge {} has invalid field", i)); }
+                            else { return Err(format!("field 'start': edge {} has invalid field", i)); }
                         },
-                        _ => { return Err(format!("edge {} has invalid field", i)); }
+                        _ => { return Err(format!("field 'start': edge {} has invalid field", i)); }
                     }
                 }
-                else { return Err(format!("edge {} is invalid", i)); }
+                else { return Err(format!("field 'start': edge {} is invalid", i)); }
             }
             ret
         },
-        None => { return Err("missing field 'edges'".to_string()); }
+        None => { return Err("field 'start': missing field 'edges'".to_string()); }
     };
     Ok(DirectedGraph::from_vec(&nodes, &edges))
 }
@@ -236,16 +236,16 @@ where S: SerSymbol, T: SerSymbol {
                              if let Some(node) = S::parse(s, arr.get(1).unwrap_or(&Value::Null)) {
                                  ret.push(node);
                              }
-                             else { return Err(format!("node {} has invalid field", i)); }
+                             else { return Err(format!("field 'result': node {} has invalid field", i)); }
                         },
-                        _ => { return Err(format!("node {} has invalid field", i)); }
+                        _ => { return Err(format!("field 'result': node {} has invalid field", i)); }
                     }
                 }
-                else { return Err(format!("node {} is invalid", i)); }
+                else { return Err(format!("field 'result': node {} is invalid", i)); }
             }
             ret
         },
-        None => { return Err("missing field 'nodes'".to_string()); }
+        None => { return Err("field 'result': missing field 'nodes'".to_string()); }
     };
     let edges = match map.get("edges").and_then(Value::as_array) {
         Some(es) => {
@@ -261,16 +261,16 @@ where S: SerSymbol, T: SerSymbol {
                             if let Some(edge) = T::parse(s, &Value::Null) {
                                 ret.push((begin as usize, end as usize, edge));
                             }
-                            else { return Err(format!("edge {} has invalid field", i)); }
+                            else { return Err(format!("field 'result': edge {} has invalid field", i)); }
                         },
-                        _ => { return Err(format!("edge {} has invalid field", i)); }
+                        _ => { return Err(format!("field 'result': edge {} has invalid field", i)); }
                     }
                 }
-                else { return Err(format!("edge {} is invalid", i)); }
+                else { return Err(format!("field 'result': edge {} is invalid", i)); }
             }
             ret
         },
-        None => { return Err("missing field 'edges'".to_string()); }
+        None => { return Err("field 'result': missing field 'edges'".to_string()); }
     };
     Ok(DirectedGraph::from_vec(&nodes, &edges))
 }

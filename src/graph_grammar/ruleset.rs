@@ -8,6 +8,7 @@ use super::Either::{self, Single, List};
 
 pub struct RuleSet<S: Symbol, T: Symbol, U: SymbolSet<S>, V: SymbolSet<T>> {
     rules: Vec<Rule<S, T, U, V>>,
+    original_weights: Vec<f32>,
     weights: Vec<f32>, //for choosing which rule to apply
     weight_shift: Box<Fn(&[f32], usize, i32) -> f32>,
     contract: GraphContract,
@@ -39,6 +40,7 @@ impl<S: Symbol, T: Symbol, U: SymbolSet<S>, V: SymbolSet<T>> RuleSet<S, T, U, V>
         }
         RuleSet{
             rules: rules,
+            original_weights: ws.clone(),
             weights: ws,
             weight_shift: weight_shift,
             contract: contract,
@@ -65,6 +67,7 @@ impl<S: Symbol, T: Symbol, U: SymbolSet<S>, V: SymbolSet<T>> RuleSet<S, T, U, V>
             true
         });
         self.rounds_taken = 0;
+        self.weights = self.original_weights.clone();
         self.graph.take()
     }
 

@@ -1,8 +1,12 @@
 use graph_grammar::labels::Symbol;
 use graph_grammar::labels::SymbolSet;
-//use std::fmt::Debug;
 
-#[derive(Clone, Eq, PartialEq, Debug)]
+#[derive(Debug, Eq, PartialEq, Clone)]
+pub struct AbilityId(pub i32);
+#[derive(Debug, Eq, PartialEq, Clone)]
+pub struct KeyId(pub i32);
+
+#[derive(Clone, PartialEq, Debug)]
 pub enum NodeLabel {
     Null,
     LevelEntry,
@@ -11,24 +15,24 @@ pub enum NodeLabel {
     AreaEntry(i32),
     AreaExit(i32),
     Pattern(i32),
-    LinearChain,
-    ParallelChain,
-    Fork,
-    DeadEnd,
-    Gate(i32),//requires the corresponding ability, may require any before it
-    Boss(i32),//requires the corresponding ability, may require any before it
+    LinearChain(AbilityId),//may require the corresponding ability or any before it
+    ParallelChain(AbilityId),//may require the corresponding ability or any before it
+    Fork(AbilityId),//may require the corresponding ability or any before it,
+    DeadEnd(AbilityId),//may require the corresponding ability or any before it
+    Gate(AbilityId),//requires the corresponding ability, may require any before it
+    Boss(i32),
     MiniBoss(i32),
-    Challenge(i32),//requires the corresponding ability, may require any before it
-    Enemies(i32),//requires the corresponding ability, may require any before it
-    Puzzle(i32),//requires the corresponding ability, may require any before it
-    Key(i32),
-    Lock(i32, u32),
-    Trigger(i32),
-    TriggerLock(i32, u32),
+    Challenge(AbilityId),//requires the corresponding ability, may require any before it
+    Enemies(AbilityId),//requires the corresponding ability, may require any before it
+    Puzzle(AbilityId),//requires the corresponding ability, may require any before it
+    Key(KeyId),
+    Lock(KeyId, u32),
+    Trigger(KeyId),
+    TriggerLock(KeyId, u32),
     Secret(i32),
     Reward(i32),
-    AbilityItem(i32),
-    Tutorial(i32),//for the corresponding ability
+    AbilityItem(AbilityId),
+    Tutorial(AbilityId),//for the corresponding ability
     Friendly(i32),
     Scenery(i32),
 }

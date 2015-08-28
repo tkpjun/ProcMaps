@@ -8,7 +8,7 @@ pub struct GraphContract {
 }
 
 impl GraphContract {
-    pub fn holds_for<T: Symbol, S: Symbol>(&self, graph: &DirectedGraph<T, S>) -> bool {
+    pub fn holds_for<V: Symbol, E: Symbol>(&self, graph: &DirectedGraph<V, E>) -> bool {
         if self.is_acyclic && Self::check_if_acyclic(graph) == false {
             return false;
         }
@@ -23,7 +23,7 @@ impl GraphContract {
         true
     }
 
-    pub fn check_if_acyclic<T: Symbol, S: Symbol>(graph: &DirectedGraph<T, S>) -> bool {
+    pub fn check_if_acyclic<V: Symbol, E: Symbol>(graph: &DirectedGraph<V, E>) -> bool {
         //attempt to use topological sorting on cloned graph
         let mut g = graph.clone();
         let mut found = true;
@@ -40,7 +40,7 @@ impl GraphContract {
         g.nodes() == 0
     }
 
-    pub fn check_max_edges<T: Symbol, S: Symbol>(graph: &DirectedGraph<T, S>, max: usize) -> bool {
+    pub fn check_max_edges<V: Symbol, E: Symbol>(graph: &DirectedGraph<V, E>, max: usize) -> bool {
         for i in 0..graph.nodes() {
             if graph.get_node(i).to.len() > max {
                 return false;
@@ -50,11 +50,11 @@ impl GraphContract {
     }
 
     //All relevant graphs are expected to be connected
-    pub fn check_if_connected<T: Symbol, S: Symbol>(graph: &DirectedGraph<T, S>) -> bool {
+    pub fn check_if_connected<V: Symbol, E: Symbol>(graph: &DirectedGraph<V, E>) -> bool {
         Self::bfs(graph, 0) == graph.nodes()
     }
 
-    fn bfs<T: Symbol, S: Symbol>(graph: &DirectedGraph<T, S>, start: usize) -> usize {
+    fn bfs<V: Symbol, E: Symbol>(graph: &DirectedGraph<V, E>, start: usize) -> usize {
         let mut last = vec!(start);
         let mut marked = Vec::new();
 

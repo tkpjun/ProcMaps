@@ -21,17 +21,17 @@ impl<T: PartialEq + Clone> Edge<T> {
 }
 
 #[derive(Clone)]
-pub struct DirectedGraph<NodeType: PartialEq + Clone, EdgeType: PartialEq + Clone> {
-    data: Vec<DirectedNode<NodeType, EdgeType>>
+pub struct DirectedGraph<V: PartialEq + Clone, E: PartialEq + Clone> {
+    data: Vec<DirectedNode<V, E>>
 }
 
-impl<T: PartialEq + Clone, S: PartialEq + Clone> DirectedGraph<T, S> {
+impl<V: PartialEq + Clone, E: PartialEq + Clone> DirectedGraph<V, E> {
 
-    pub fn new() -> DirectedGraph<T, S> {
+    pub fn new() -> DirectedGraph<V, E> {
         DirectedGraph{ data: Vec::new() }
     }
 
-    pub fn from_vec(nodes: &[T], edges: &[(usize, usize, S)]) -> DirectedGraph<T, S> {
+    pub fn from_vec(nodes: &[V], edges: &[(usize, usize, E)]) -> DirectedGraph<V, E> {
         let mut g = DirectedGraph{ data: Vec::new() };
         for node in nodes {
             g.push_node(node.clone());
@@ -46,20 +46,20 @@ impl<T: PartialEq + Clone, S: PartialEq + Clone> DirectedGraph<T, S> {
         self.data.len()
     }
 
-    pub fn push_node(&mut self, label: T) {
+    pub fn push_node(&mut self, label: V) {
         let node = DirectedNode{ label: label, to: Vec::new(), from: Vec::new() };
         self.data.push(node);
     }
 
-    pub fn get_node(&self, index: usize) -> &DirectedNode<T, S> {
+    pub fn get_node(&self, index: usize) -> &DirectedNode<V, E> {
         &self.data[index]
     }
 
-    pub fn mut_label(&mut self, index: usize) -> &mut T {
+    pub fn mut_label(&mut self, index: usize) -> &mut V {
         &mut self.data[index].label
     }
 
-    pub fn mut_edge_label(&mut self, start_index: usize, target_index: usize) -> &mut S {
+    pub fn mut_edge_label(&mut self, start_index: usize, target_index: usize) -> &mut E {
         &mut self.data[start_index].to.iter_mut().find(|e| e.to == target_index).unwrap().label
     }
 
@@ -121,13 +121,13 @@ impl<T: PartialEq + Clone, S: PartialEq + Clone> DirectedGraph<T, S> {
         }
     }
 
-    pub fn add_edge(&mut self, from: usize, to: usize, label: S) {
+    pub fn add_edge(&mut self, from: usize, to: usize, label: E) {
         let edge = Edge{label: label.clone(), from: from, to: to};
         self.data[from].to.push(edge);
         self.data[to].from.push(from);
     }
 
-    pub fn add_undir_edge(&mut self, from: usize, to: usize, label: S) {
+    pub fn add_undir_edge(&mut self, from: usize, to: usize, label: E) {
         let edge = Edge{label: label.clone(), from: from, to: to};
         self.data[from].to.push(edge);
         self.data[to].from.push(from);
@@ -156,16 +156,16 @@ impl<T: PartialEq + Clone, S: PartialEq + Clone> DirectedGraph<T, S> {
         self.data[to].from.swap_remove(i);
     }
 
-    pub fn cut_at(&mut self, node1: T, node2: T) -> Option<DirectedGraph<T, S>> {
+    pub fn cut_at(&mut self, node1: V, node2: V) -> Option<DirectedGraph<V, E>> {
         unimplemented!();
     }
 
-    pub fn connect_at(&mut self, s_node: T, other: DirectedGraph<T, S>, o_node: T) {
+    pub fn connect_at(&mut self, s_node: V, other: DirectedGraph<V, E>, o_node: V) {
         unimplemented!();
     }
 }
 
-impl<T: Debug + PartialEq + Clone, S: Debug + PartialEq + Clone> ToString for DirectedGraph<T, S> {
+impl<V: Debug + PartialEq + Clone, E: Debug + PartialEq + Clone> ToString for DirectedGraph<V, E> {
     fn to_string(&self) -> String {
         let mut s = String::new();
         for node in &self.data {

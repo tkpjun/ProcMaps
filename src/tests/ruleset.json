@@ -1,13 +1,13 @@
 {
   "labelSet": "missionGrammar",
-  "searchLabels": true,
+  "searchLabels": false,
   "contract": { "isAcyclic": true },
   "rules":
   [
     {
       "weight": 1,
       "start": {
-        "nodes": [ ["Is", ["Null"] ] ],
+        "nodes": [ ["Null"] ],
         "edges": []
       },
       "result": {
@@ -37,8 +37,8 @@
     {
       "weight": 1,
       "start": {
-        "nodes": [ ["Is", ["Pattern", 1]], ["Is", ["Gate", 1]] ],
-        "edges": [ [0, 1, "Is", "Loose"] ]
+        "nodes": [ ["Pattern", 1], ["Gate", 1] ],
+        "edges": [ [0, 1, "Loose"] ]
       },
       "result": {
         "nodes": [
@@ -48,7 +48,7 @@
           ["Boss", 1],
           ["Challenge", 1],
           ["Key", 1],
-          ["DeadEnd"]
+          ["DeadEnd", 1]
         ],
         "edges": [
           [0, 1, "Loose"],
@@ -58,6 +58,42 @@
           [4, 5, "Tight"],
           [5, 2, "Loose"],
           [5, 6, "Loose"]
+        ]
+      },
+      "sameNodes": [ [0, 0], [1, 3] ]
+    },
+    {
+      "weight": 1,
+      "start": {
+        "nodes": [ ["Pattern", 0], ["Gate", "val"] ],
+        "edges": [ [0, 1, "Loose"] ]
+      },
+      "result": {
+        "nodes": [
+          ["ParallelChain"],
+          ["Gate", "val"]
+        ],
+        "edges": [
+          [0, 1, "Loose"]
+        ]
+      }
+    },
+    {
+      "weight": 1,
+      "start": {
+        "nodes": [ ["Pattern", 0], ["Gate", "val"] ],
+        "edges": [ [0, 1, "Loose"] ]
+      },
+      "result": {
+        "nodes": [
+          ["LinearChain", "val"],
+          ["LinearChain", "val"],
+          ["LinearChain", "val"]
+        ],
+        "edges": [
+          [0, 1, "Tight"],
+          [1, 2, "Tight"],
+          [2, 3, "Tight"]
         ]
       },
       "sameNodes": [ [0, 0], [1, 3] ]
