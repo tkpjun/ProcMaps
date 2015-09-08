@@ -6,8 +6,9 @@ use super::ser_symbol::SerSymbol;
 use graph_grammar::graph::DirectedGraph;
 use graph_grammar::rule::Rule;
 use graph_grammar::ruleset::RuleSet;
-use graph_grammar::labels::SearchLabel;
+//use graph_grammar::labels::SearchLabel;
 use graph_grammar::labels::SymbolSet;
+use graph_grammar::labels::RichSymbol;
 use graph_grammar::contract::GraphContract;
 use graph_grammar::Either;
 use serde::json::{self, Value};
@@ -28,12 +29,12 @@ pub fn mission_rules(value: &Value) -> Result<RuleSet<MissionNode, MissionEdge, 
     get_ruleset::<MissionNode, MissionEdge, MissionNode, MissionEdge>(value)
 }
 
-pub fn mission_rules_complex(value: &Value) -> Result<RuleSet<MissionNode, MissionEdge, SearchLabel<MissionNode>, SearchLabel<MissionEdge>>, JsonError> {
+/*pub fn mission_rules_complex(value: &Value) -> Result<RuleSet<MissionNode, MissionEdge, SearchLabel<MissionNode>, SearchLabel<MissionEdge>>, JsonError> {
     get_ruleset::<MissionNode, MissionEdge, SearchLabel<MissionNode>, SearchLabel<MissionEdge>>(value)
-}
+}*/
 
 fn get_ruleset<S, T, U, V>(value: &Value) -> Result<RuleSet<S, T, U, V>, JsonError>
-where S: SerSymbol, T: SerSymbol, U: SerSymbol + SymbolSet<S>, V: SerSymbol + SymbolSet<T> {
+where S: RichSymbol + SerSymbol, T: SerSymbol, U: RichSymbol + SerSymbol + SymbolSet<S>, V: SerSymbol + SymbolSet<T> {
     let rules_and_weights = try!(err_checked(get_rules(value)));
     let contract = try!(get_contract(value));
     let function = |weights: &[f32], index: usize, _: i32| -> f32 {
@@ -110,7 +111,7 @@ fn get_labels(value: &Value) -> (Vec<UntypedNode>, Vec<UntypedEdge>) {
 }
 
 fn get_rules<S, T, U, V>(value: &Value) -> Option<Vec<Result<(Rule<S, T, U, V>, f32), String>>>
-where S: SerSymbol, T: SerSymbol, U: SerSymbol + SymbolSet<S>, V: SerSymbol + SymbolSet<T> {
+where S: RichSymbol + SerSymbol, T: SerSymbol, U: RichSymbol + SerSymbol + SymbolSet<S>, V: SerSymbol + SymbolSet<T> {
     value.as_object()
          .and_then(|o| o.get("rules"))
          .and_then(Value::as_array)
@@ -122,7 +123,7 @@ where S: SerSymbol, T: SerSymbol, U: SerSymbol + SymbolSet<S>, V: SerSymbol + Sy
 }
 
 fn create_rule<S, T, U, V>(map: Option<&BTreeMap<String, Value>>) -> Result<(Rule<S, T, U, V>, f32), String>
-where S: SerSymbol, T: SerSymbol, U: SerSymbol + SymbolSet<S>, V: SerSymbol + SymbolSet<T> {
+where S: RichSymbol + SerSymbol, T: SerSymbol, U: RichSymbol + SerSymbol + SymbolSet<S>, V: SerSymbol + SymbolSet<T> {
     let weight = match map.and_then(|m| m.get("weight")) {
         Some(val) => val.as_f64(),
         None => Some(1.0)

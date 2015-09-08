@@ -2,8 +2,10 @@ use mission_grammar::labels::NodeLabel as MissionNode;
 use mission_grammar::labels::EdgeLabel as MissionEdge;
 use mission_grammar::labels::{AbilityId, KeyId};
 use graph_grammar::labels::Symbol;
-use graph_grammar::labels::SearchLabel;
+//use graph_grammar::labels::SearchLabel;
 use serde::json::Value;
+use graph_grammar::labels::InnerData;
+use mission_grammar::labels::Id as MissionId;
 
 pub trait SerSymbol: Symbol {
     fn parse(&str, &Value) -> Option<Self>;
@@ -42,6 +44,32 @@ impl SerSymbol for MissionNode {
                 _ => None
             }
         }
+        else if let Some(s) = value.as_string() {
+            if s.chars().next().unwrap_or('!') != 'x' {
+                return None;
+            }
+            let i = if s.contains('+') {
+                match s.chars().last().unwrap_or('!').to_string().parse::<i32>() {
+                    Ok(a) => a,
+                    Err(_) => return None
+                }
+            }
+            else if s.contains('-') {
+                match s.chars().last().unwrap_or('!').to_string().parse::<i32>() {
+                    Ok(a) => -a,
+                    Err(_) => return None
+                }
+            }
+            else { 0 };
+
+            let MissionId(sub) = MissionId::get_special_var(i).unwrap();
+            match name {
+                "LinearChain" => Some(MissionNode::LinearChain(AbilityId(sub))),
+                "ParallelChain" => Some(MissionNode::ParallelChain(AbilityId(sub))),
+                "Gate" => Some(MissionNode::Gate(AbilityId(sub))),
+                _ => None
+            }
+        }
         else {
             match name {
                 "Null" => Some(MissionNode::Null),
@@ -53,7 +81,7 @@ impl SerSymbol for MissionNode {
     }
 }
 
-impl SerSymbol for SearchLabel<MissionNode> {
+/*impl SerSymbol for SearchLabel<MissionNode> {
     fn parse(name: &str, value: &Value) -> Option<SearchLabel<MissionNode>> {
         let arr = match value.as_array() {
             Some(a) => a,
@@ -98,7 +126,7 @@ impl SerSymbol for SearchLabel<MissionNode> {
             _ =>  None
         }
     }
-}
+}*/
 
 impl SerSymbol for MissionEdge {
     fn parse(name: &str, _: &Value) -> Option<MissionEdge> {
@@ -110,7 +138,7 @@ impl SerSymbol for MissionEdge {
     }
 }
 
-impl SerSymbol for SearchLabel<MissionEdge> {
+/*impl SerSymbol for SearchLabel<MissionEdge> {
     fn parse(name: &str, value: &Value) -> Option<SearchLabel<MissionEdge>> {
         let arr = match value.as_array() {
             Some(a) => a,
@@ -153,4 +181,4 @@ impl SerSymbol for SearchLabel<MissionEdge> {
             _ =>  None
         }
     }
-}
+}*/

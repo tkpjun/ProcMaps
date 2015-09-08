@@ -1,6 +1,5 @@
 use graph_grammar::graph::DirectedGraph;
 use graph_grammar::rule::Rule;
-use graph_grammar::labels::SearchLabel::{self, Any, Some, Is};
 use std::collections::HashMap;
 use tests::DummyLabel::{self, A, B, C};
 
@@ -10,7 +9,7 @@ fn find_subgraphs() {
     let rule = build_rule();
     let subgraphs = rule.find_subgraphs(&graph);
     assert!(subgraphs.len() == 2);
-    assert_eq!(format!("{:?}", subgraphs[0]), "[0, 1]");
+    assert_eq!(format!("{:?}", subgraphs[0]), "([0, 1], None)");
 }
 
 #[test]
@@ -18,7 +17,7 @@ fn apply_rule() {
     let mut graph = build_graph();
     let rule = build_rule();
     let subgraphs = rule.find_subgraphs(&graph);
-    rule.apply_to(&mut graph, &subgraphs[0]);
+    rule.apply_to(&mut graph, &subgraphs[0].0, &subgraphs[0].1);
     /*assert_eq!(graph.to_string(),
     "1,2,-> A -> B(0-2),\n\
     -> A -> A(1-0),\n\
@@ -35,8 +34,8 @@ fn build_graph() -> DirectedGraph<DummyLabel, DummyLabel> {
 }
 
 #[allow(dead_code)]
-fn build_rule() -> Rule<DummyLabel, DummyLabel, SearchLabel<DummyLabel>, SearchLabel<DummyLabel>> {
-    let s = DirectedGraph::from_vec(&[Is(A), Some(vec!(B))], &[(0, 1, Any)]);
+fn build_rule() -> Rule<DummyLabel, DummyLabel, DummyLabel, DummyLabel> {
+    let s = DirectedGraph::from_vec(&[A, B], &[(0, 1, A)]);
     let r = DirectedGraph::from_vec(&[A, C], &[(0, 1, B), (1, 0, B)]);
     let mut h = HashMap::new();
     h.insert(0, 0);

@@ -2,11 +2,12 @@ use super::contract::GraphContract;
 use super::rule::Rule;
 use super::graph::DirectedGraph;
 use super::labels::Symbol;
+use super::labels::RichSymbol;
 use super::labels::SymbolSet;
 use rand::{self, Rng, SeedableRng, XorShiftRng};
 use super::Either::{self, Single, List};
 
-pub struct RuleSet<S: Symbol, T: Symbol, U: SymbolSet<S>, V: SymbolSet<T>> {
+pub struct RuleSet<S: RichSymbol, T: Symbol, U: RichSymbol + SymbolSet<S>, V: SymbolSet<T>> {
     rules: Vec<Rule<S, T, U, V>>,
     original_weights: Vec<f32>,
     weights: Vec<f32>, //for choosing which rule to apply
@@ -18,7 +19,7 @@ pub struct RuleSet<S: Symbol, T: Symbol, U: SymbolSet<S>, V: SymbolSet<T>> {
     //target_params, //for choosing which subgraph to apply the rule on
 }
 
-impl<S: Symbol, T: Symbol, U: SymbolSet<S>, V: SymbolSet<T>> RuleSet<S, T, U, V> {
+impl<S: RichSymbol, T: Symbol, U: RichSymbol + SymbolSet<S>, V: SymbolSet<T>> RuleSet<S, T, U, V> {
 
     pub fn new(rules: Vec<Rule<S, T, U, V>>,
                weights: Either<f32, Vec<f32>>,
@@ -84,8 +85,8 @@ impl<S: Symbol, T: Symbol, U: SymbolSet<S>, V: SymbolSet<T>> RuleSet<S, T, U, V>
         let graph = self.graph.as_mut().expect("No graph assigned to ruleset!");
         let subs = rule.find_subgraphs(graph);
         if subs.len() > 0 {
-            let sub = &subs[self.rng.gen_range(0, subs.len())];
-            rule.apply_to(graph, sub);
+            let &(ref sub, ref base) = &subs[self.rng.gen_range(0, subs.len())];
+            rule.apply_to(graph, sub, base);
             self.rounds_taken += 1;
             let new_wt = &*self.weight_shift;
             self.weights[index] = new_wt(&self.weights, index, self.rounds_taken);

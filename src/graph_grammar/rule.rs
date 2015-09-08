@@ -3,30 +3,33 @@ use super::graph::Edge;
 use std::collections::VecDeque;
 use std::collections::HashMap;
 use super::labels::Symbol;
+use super::labels::RichSymbol;
 use super::labels::SymbolSet;
+use super::labels::InnerData;
+use std::usize;
 
-pub struct Rule<S: Symbol, T: Symbol, U: SymbolSet<S>, V: SymbolSet<T>> {
+const EMPTY: usize = usize::MAX;
+
+pub struct Rule<S: RichSymbol, T: Symbol, U: RichSymbol + SymbolSet<S>, V: SymbolSet<T>> {
     start: DirectedGraph<U, V>,
     result: DirectedGraph<S, T>,
     start_to_res: HashMap<usize, usize>,
     res_to_start: HashMap<usize, usize>,
-    //enforce_direction: bool,
 }
 
-impl<S: Symbol, T: Symbol, U: SymbolSet<S>, V: SymbolSet<T>> Rule<S, T, U, V> {
+impl<S: RichSymbol, T: Symbol, U: RichSymbol + SymbolSet<S>, V: SymbolSet<T>> Rule<S, T, U, V> {
 
     pub fn new(start: DirectedGraph<U, V>, result: DirectedGraph<S, T>, start_to_res: HashMap<usize, usize>) -> Rule<S, T, U, V> {
         let res_to_start = start_to_res.iter().map(|(&k, &v)| (v, k)).collect();
         Rule{ start: start, result: result, start_to_res: start_to_res, res_to_start: res_to_start }
     }
 
-    pub fn apply_to(&self, graph: &mut DirectedGraph<S, T>, subgraph: &[usize]) {
-        let updated_subgraph = self.alter_old(graph, subgraph);
-        self.add_new(graph, &updated_subgraph);
+    pub fn apply_to(&self, graph: &mut DirectedGraph<S, T>, subgraph: &[usize], base_inner: &Option<S::Inner>) {
+        let updated_subgraph = self.alter_old(graph, subgraph, base_inner);
+        self.add_new(graph, &updated_subgraph, base_inner);
     }
 
-    pub fn find_subgraphs(&self, graph: &DirectedGraph<S, T>) -> Vec<Vec<usize>> {
-        let empty = self.start.nodes();
+    pub fn find_subgraphs(&self, graph: &DirectedGraph<S, T>) -> Vec<(Vec<usize>, Option<S::Inner>)> {
         let mut ret = Vec::new();
         for i in 0..graph.nodes() {
             if let Some(vec) = self.initial_node(i, graph) {
@@ -52,7 +55,7 @@ impl<S: Symbol, T: Symbol, U: SymbolSet<S>, V: SymbolSet<T>> Rule<S, T, U, V> {
                 ret.push(s);
             }
             for index in (ret.len()..0) {
-                if ret[index][edge.to] == empty {
+                if ret[index].0[edge.to] == EMPTY {
                     ret.swap_remove(index);
                 }
             }
@@ -73,39 +76,78 @@ impl<S: Symbol, T: Symbol, U: SymbolSet<S>, V: SymbolSet<T>> Rule<S, T, U, V> {
         return ret;
     }
 
-    fn initial_node<'a>(&self, index: usize, graph: &'a DirectedGraph<S, T>) -> Option<Vec<usize>> {
-        let empty = self.start.nodes();
-        let mut try = Vec::new();
+    fn initial_node<'a>(&self, index: usize, graph: &'a DirectedGraph<S, T>) -> Option<(Vec<usize>, Option<S::Inner>)> {
+        let mut try = Vec::with_capacity(self.start.nodes());
+        let mut base_inner = None;
         if self.start.get_node(0).label.is_superset_of(&graph.get_node(index).label) {
             for _ in 0..self.start.nodes() {
-                try.push(empty);
+                try.push(EMPTY);
             }
             try[0] = index;
+            match self.start.get_node(0).label.get_inner().and_then(|a| a.is_special_var()) {
+                Some(a) if a == 0 => base_inner = graph.get_node(index).label.get_inner(),
+                _ => {}
+            }
         }
-        if try.len() > 0 { Some(try) } else { None }
+        if try.len() > 0 { Some((try, base_inner)) } else { None }
     }
 
-    fn update_subgraph(&self, rule_edge: &Edge<V>, subgraph: &mut Vec<usize>, graph: &DirectedGraph<S, T>) -> Vec<Vec<usize>> {
-        let empty = self.start.nodes();
+    fn update_subgraph(&self, rule_edge: &Edge<V>, subgraph: &mut (Vec<usize>, Option<S::Inner>), graph: &DirectedGraph<S, T>) -> Vec<(Vec<usize>, Option<S::Inner>)> {
         let mut new_subgraphs = Vec::new();
-        let matching_edges = self.edge_matches(rule_edge, subgraph[rule_edge.from], graph);
-        let to = if matching_edges.len() > 0 { matching_edges[0].to } else { empty };
-        if subgraph[rule_edge.to] == empty {
-            subgraph[rule_edge.to] = to;
+        let matching_edges = self.edge_matches(rule_edge, subgraph.0[rule_edge.from], graph);
+        let to = if matching_edges.len() > 0 { matching_edges[0].to } else { EMPTY };
+
+        if subgraph.0[rule_edge.to] == EMPTY {
+            subgraph.0[rule_edge.to] = to;
         }
-        else if subgraph[rule_edge.to] != to {
-            subgraph[rule_edge.to] = empty;
+        else if subgraph.0[rule_edge.to] != to {
+            subgraph.0[rule_edge.to] = EMPTY;
+        }
+
+        if let Some(diff) = self.start.get_node(rule_edge.to).label.get_inner().and_then(|a| a.is_special_var()) {
+            let mut base_is_none = false;
+            let base = {
+                let mut b = graph.get_node(to).label.get_inner().unwrap();
+                b.increment(diff);
+                b
+            };
+            if let &Some(ref a) = &subgraph.1 {
+                if *a != base { subgraph.0[rule_edge.to] = EMPTY; }
+            }
+            else {
+                base_is_none = true;
+            }
+
+            if base_is_none { subgraph.1 = Some(base); }
         }
 
         if matching_edges.len() > 1 {
             for e in matching_edges[1..].iter() {
                 let mut new = subgraph.clone();
-                if new[rule_edge.to] == empty {
-                    new[rule_edge.to] = e.to;
+                if new.0[rule_edge.to] == EMPTY {
+                    new.0[rule_edge.to] = e.to;
                 }
-                else if new[rule_edge.to] != to {
-                    new[rule_edge.to] = empty;
+                else if new.0[rule_edge.to] != to {
+                    new.0[rule_edge.to] = EMPTY;
                 }
+
+                if let Some(diff) = self.start.get_node(rule_edge.to).label.get_inner().and_then(|a| a.is_special_var()) {
+                    let mut base_is_none = false;
+                    let base = {
+                        let mut b = graph.get_node(e.to).label.get_inner().unwrap();
+                        b.increment(diff);
+                        b
+                    };
+                    if let &Some(ref a) = &new.1 {
+                        if *a != base { new.0[rule_edge.to] = EMPTY; }
+                    }
+                    else {
+                        base_is_none = true;
+                    }
+
+                    if base_is_none { new.1 = Some(base); }
+                }
+
                 new_subgraphs.push(new);
             }
         }
@@ -126,9 +168,9 @@ impl<S: Symbol, T: Symbol, U: SymbolSet<S>, V: SymbolSet<T>> Rule<S, T, U, V> {
         return ret;
     }
 
-    fn alter_old(&self, graph: &mut DirectedGraph<S, T>, subgraph: &[usize]) -> Vec<usize> {
+    fn alter_old(&self, graph: &mut DirectedGraph<S, T>, subgraph: &[usize], base_inner: &Option<S::Inner>) -> Vec<usize> {
         //update to remove all edges between nodes in start instead of just ones that point to
-        //nodes that don't exist in result
+        //nodes that don't exist in result?
         let mut new_sub = subgraph.iter().map(|&i| i).collect::<Vec<usize>>();
         for start_index in 0..subgraph.len() {
             if let Some(result_index) = self.start_to_res.get(&start_index) {
@@ -137,6 +179,14 @@ impl<S: Symbol, T: Symbol, U: SymbolSet<S>, V: SymbolSet<T>> Rule<S, T, U, V> {
                     let old_node = graph.mut_label(subgraph[start_index]);
                     if *old_node != *new_node {
                         *old_node = new_node.clone();
+                    }
+                    if let Some(i) = new_node.get_inner().and_then(|a| a.is_special_var()) {
+                        let inc_inner = {
+                            let mut a = base_inner.clone().unwrap();
+                            a.increment(i);
+                            a
+                        };
+                        old_node.set_inner(&inc_inner);
                     }
                 }
                 for edge in self.start.get_node(start_index).to.iter() {
@@ -158,9 +208,9 @@ impl<S: Symbol, T: Symbol, U: SymbolSet<S>, V: SymbolSet<T>> Rule<S, T, U, V> {
         new_sub
     }
 
-    fn add_new(&self, graph: &mut DirectedGraph<S, T>, subgraph: &[usize]) {
-        //update to add all edges in result, because all edges between nodes have been removed
-        let node_indexes = self.build_result_subgraph(graph, subgraph);
+    fn add_new(&self, graph: &mut DirectedGraph<S, T>, subgraph: &[usize], base_inner: &Option<S::Inner>) {
+        //update to add all edges in result, because all edges between nodes have been removed?
+        let node_indexes = self.build_result_subgraph(graph, subgraph, base_inner);
         for index in 0..self.result.nodes() {
             let res_node = self.result.get_node(index);
             let start_node = self.res_to_start.get(&index);
@@ -181,7 +231,7 @@ impl<S: Symbol, T: Symbol, U: SymbolSet<S>, V: SymbolSet<T>> Rule<S, T, U, V> {
         }
     }
 
-    fn build_result_subgraph(&self, graph: &mut DirectedGraph<S, T>, subgraph: &[usize]) -> Vec<usize>{
+    fn build_result_subgraph(&self, graph: &mut DirectedGraph<S, T>, subgraph: &[usize], base_inner: &Option<S::Inner>) -> Vec<usize>{
         let mut node_indexes = Vec::new();
         for result_index in 0..self.result.nodes() {
             let res_node = self.result.get_node(result_index);
@@ -190,7 +240,16 @@ impl<S: Symbol, T: Symbol, U: SymbolSet<S>, V: SymbolSet<T>> Rule<S, T, U, V> {
                     subgraph[*start_index]
                 }
                 else {
-                    graph.push_node(res_node.label.clone());
+                    let mut new_node = res_node.label.clone();
+                    if let Some(i) = new_node.get_inner().and_then(|a| a.is_special_var()) {
+                        let inc_inner = {
+                            let mut a = base_inner.clone().unwrap();
+                            a.increment(i);
+                            a
+                        };
+                        new_node.set_inner(&inc_inner);
+                    }
+                    graph.push_node(new_node);
                     graph.nodes() - 1
                 };
             node_indexes.push(graph_index);
