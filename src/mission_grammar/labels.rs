@@ -19,8 +19,7 @@ pub struct Id(pub i32);
 impl InnerData for Id {
     fn is_special_var(&self) -> Option<i32> {
         let &Id(i) = self;
-        let a = i - X;
-        if a <= 9 { Some(a) } else if a >= -9 { Some(a) } else { None }
+        if i <= X + 18 { Some(i - X) } else { None }
     }
     fn get_special_var(id: i32) -> Option<Id> {
         match id {

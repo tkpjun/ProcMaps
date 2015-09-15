@@ -43,7 +43,7 @@ impl<S: RichSymbol, T: Symbol, U: RichSymbol + SymbolSet<S>, V: SymbolSet<T>> Ru
         }
 
         while edges_left.len() > 0 && ret.len() > 0 {
-            let edge = edges_left.pop_front().unwrap();
+            let edge = edges_left.pop_front().expect("Rule.rs line 46");
             let mut new_subgraphs = Vec::new();
             for subgraph in ret.iter_mut() {
                 let forks = self.update_subgraph(edge, subgraph, graph);
@@ -107,7 +107,7 @@ impl<S: RichSymbol, T: Symbol, U: RichSymbol + SymbolSet<S>, V: SymbolSet<T>> Ru
         if let Some(diff) = self.start.get_node(rule_edge.to).label.get_inner().and_then(|a| a.is_special_var()) {
             let mut base_is_none = false;
             let base = {
-                let mut b = graph.get_node(to).label.get_inner().unwrap();
+                let mut b = graph.get_node(to).label.get_inner().expect("Rule.rs line 110");
                 b.increment(diff);
                 b
             };
@@ -134,7 +134,7 @@ impl<S: RichSymbol, T: Symbol, U: RichSymbol + SymbolSet<S>, V: SymbolSet<T>> Ru
                 if let Some(diff) = self.start.get_node(rule_edge.to).label.get_inner().and_then(|a| a.is_special_var()) {
                     let mut base_is_none = false;
                     let base = {
-                        let mut b = graph.get_node(e.to).label.get_inner().unwrap();
+                        let mut b = graph.get_node(e.to).label.get_inner().expect("Rule.rs line 137");
                         b.increment(diff);
                         b
                     };
@@ -182,7 +182,7 @@ impl<S: RichSymbol, T: Symbol, U: RichSymbol + SymbolSet<S>, V: SymbolSet<T>> Ru
                     }
                     if let Some(i) = new_node.get_inner().and_then(|a| a.is_special_var()) {
                         let inc_inner = {
-                            let mut a = base_inner.clone().unwrap();
+                            let mut a = base_inner.clone().expect("Rule.rs line 185");
                             a.increment(i);
                             a
                         };
@@ -192,7 +192,7 @@ impl<S: RichSymbol, T: Symbol, U: RichSymbol + SymbolSet<S>, V: SymbolSet<T>> Ru
                 for edge in self.start.get_node(start_index).to.iter() {
                     let edge_target = self.start_to_res.get(&edge.to);
                     if edge_target.is_none() ||
-                       self.result.get_node(*edge_target.unwrap()).from.iter()
+                       self.result.get_node(*edge_target.expect("Rule.rs line 195")).from.iter()
                            .all(|&from| from != self.start_to_res[&edge.from]) {
                         graph.remove_edge(subgraph[edge.from], subgraph[edge.to]);
                     }
@@ -217,8 +217,8 @@ impl<S: RichSymbol, T: Symbol, U: RichSymbol + SymbolSet<S>, V: SymbolSet<T>> Ru
             for edge in res_node.to.iter() {
                 let start_target = self.res_to_start.get(&edge.to);
                 if start_node.is_none() || start_target.is_none() ||
-                   self.start.get_node(*start_node.unwrap()).to.iter()
-                        .all(|e| e.to != *start_target.unwrap()) {
+                   self.start.get_node(*start_node.expect("Rule.rs line 220")).to.iter()
+                        .all(|e| e.to != *start_target.expect("Rule.rs line 221")) {
                     graph.add_edge(node_indexes[index], node_indexes[edge.to], edge.label.clone());
                 }
                 else {
@@ -243,7 +243,7 @@ impl<S: RichSymbol, T: Symbol, U: RichSymbol + SymbolSet<S>, V: SymbolSet<T>> Ru
                     let mut new_node = res_node.label.clone();
                     if let Some(i) = new_node.get_inner().and_then(|a| a.is_special_var()) {
                         let inc_inner = {
-                            let mut a = base_inner.clone().unwrap();
+                            let mut a = base_inner.clone().expect("Rule.rs line 246");
                             a.increment(i);
                             a
                         };

@@ -57,6 +57,7 @@ impl GraphContract {
     fn bfs<V: Symbol, E: Symbol>(graph: &DirectedGraph<V, E>, start: usize) -> usize {
         let mut last = vec!(start);
         let mut marked = Vec::new();
+        marked.push(start);
 
         let mut found = true;
         while found {
@@ -68,6 +69,7 @@ impl GraphContract {
                         found = true;
                         marked.push(path.to);
                         next.push(path.to);
+                        //println!("{}", marked.len());
                     }
                 }
             }

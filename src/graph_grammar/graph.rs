@@ -60,7 +60,7 @@ impl<V: PartialEq + Clone, E: PartialEq + Clone> DirectedGraph<V, E> {
     }
 
     pub fn mut_edge_label(&mut self, start_index: usize, target_index: usize) -> &mut E {
-        &mut self.data[start_index].to.iter_mut().find(|e| e.to == target_index).unwrap().label
+        &mut self.data[start_index].to.iter_mut().find(|e| e.to == target_index).expect("No such edge!").label
     }
 
     pub fn remove_node(&mut self, index: usize) {
@@ -168,14 +168,14 @@ impl<V: PartialEq + Clone, E: PartialEq + Clone> DirectedGraph<V, E> {
 impl<V: Debug + PartialEq + Clone, E: Debug + PartialEq + Clone> ToString for DirectedGraph<V, E> {
     fn to_string(&self) -> String {
         let mut s = String::new();
-        for node in &self.data {
+        for (index, node) in self.data.iter().enumerate() {
             let mut sorted = node.from.clone();
             sorted.sort_by(|a, b| a.cmp(b));
             for path in sorted {
                 s = s + &*path.to_string() + ",";
             }
 
-            s = s + &*format!("-> {:?} -> ", node.label);
+            s = s + &*format!("-> {}:{:?} -> ", index, node.label);
 
             let mut sorted = node.to.clone();
             sorted.sort_by(|a, b| a.to.cmp(&b.to));
